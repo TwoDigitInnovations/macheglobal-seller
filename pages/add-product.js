@@ -57,19 +57,30 @@ function Products(props) {
     Quantity: "",
   });
   
+  // Use ref to store editor instance and content
+  const editorRef = useRef(null);
+  const isTyping = useRef(false);
+  
   // Memoize the editor config to prevent re-renders
   const editorConfig = useMemo(() => ({
     ...config,
     readonly: false,
-    placeholder: !productsData.long_description ? "Start writing..." : "",
-  }), [productsData.long_description]);
+    placeholder: "Start writing...",
+  }), []); // Remove dependency to prevent re-renders
 
-  // Handle editor content change
-  const handleEditorChange = useCallback((newContent) => {
-    setProductsData(prev => ({
-      ...prev,
-      long_description: newContent
-    }));
+  // Handle editor content change - update state without re-rendering editor
+  const handleEditorBlur = useCallback((newContent) => {
+    isTyping.current = false;
+    setProductsData(prev => {
+      // Only update if content actually changed
+      if (prev.long_description !== newContent) {
+        return {
+          ...prev,
+          long_description: newContent
+        };
+      }
+      return prev;
+    });
   }, []);
 
   const [varients, setvarients] = useState([
@@ -112,10 +123,10 @@ function Products(props) {
           selected: variant.selected?.map((sel) => ({
             attributes: productsData.Attribute.map((attr) => {
               const existingAttr = sel.attributes?.find(
-                (a) => a.label.toLowerCase() === attr.name.toLowerCase()
+                (a) => a?.label?.toLowerCase() === attr?.name?.toLowerCase()
               );
               return {
-                label: attr.name,
+                label: attr?.name || "",
                 value: existingAttr?.value || ""
               };
             }),
@@ -644,13 +655,14 @@ function Products(props) {
                 </p>
                 <div className="w-full text-black">
                   <JoditEditor
-                    key="jodit-editor"
+                    ref={editorRef}
+                    key={`editor-${router.query.id || 'new'}`}
                     className="editor max-h-screen overflow-auto"
                     rows={10}
                     config={editorConfig}
                     value={productsData.long_description}
-                    onChange={handleEditorChange}
-
+                    tabIndex={1}
+                    onBlur={handleEditorBlur}
                   />
                 </div>
               </div>

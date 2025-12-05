@@ -16,6 +16,7 @@ import {
   IoRemoveSharp,
 } from "react-icons/io5";
 import { userContext } from "./_app";
+import Swal from "sweetalert2";
 
 import {
   Search,
@@ -138,6 +139,50 @@ function Orders(props) {
     }
   };
 
+  const handleMarkAsShipped = async (orderId) => {
+    try {
+      props.loader && props.loader(true);
+      
+      // Service.js already adds /api/, so just use orders/updateStatus
+      const response = await Api('post', 'orders/updateStatus', {
+        id: orderId,
+        status: 'shipped'
+      }, router);
+
+      if (response?.status === true) {
+        // Show success message with SweetAlert
+        Swal.fire({
+          icon: 'success',
+          title: 'Success!',
+          text: 'Order marked as shipped successfully!',
+          timer: 2000,
+          showConfirmButton: false
+        });
+        
+        // Close drawer
+        closeDrawer();
+        
+        // Refresh orders list
+        getOrderBySeller(selctDate, currentPage);
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: response?.message || 'Failed to update order status'
+        });
+      }
+    } catch (error) {
+      console.error('Error marking order as shipped:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error?.message || 'Failed to update order status. Please try again.'
+      });
+    } finally {
+      props.loader && props.loader(false);
+    }
+  };
+
   function convertISODateToFormattedString(isoDateString) {
     const date = new Date(isoDateString);
     const day = date.getDate();
@@ -173,9 +218,28 @@ function Orders(props) {
 
   function Status({ row }) {
     const getStatus = (order) => {
+      // Check the status field first (new status system)
+      if (order.status) {
+        switch (order.status.toLowerCase()) {
+          case 'delivered':
+            return { text: 'Delivered', color: 'text-green-600' };
+          case 'shipped':
+            return { text: 'Shipped', color: 'text-indigo-600' };
+          case 'processing':
+            return { text: 'Processing', color: 'text-blue-600' };
+          case 'cancelled':
+            return { text: 'Cancelled', color: 'text-red-600' };
+          case 'pending':
+            return { text: 'Pending', color: 'text-yellow-500' };
+          default:
+            break;
+        }
+      }
+      
+      // Fallback to old system (isDelivered, isPaid)
       if (order.isDelivered) return { text: 'Delivered', color: 'text-green-600' };
       if (order.isPaid) return { text: 'Paid - Processing', color: 'text-blue-600' };
-      return { text: ' Pending', color: 'text-yellow-500' };
+      return { text: 'Pending', color: 'text-yellow-500' };
     };
 
     const status = getStatus(row.original);
@@ -392,7 +456,7 @@ function Orders(props) {
                 />
               </div>
 
-              {cartData?.status === "Cancel" && (
+              {cartData?.status === "cancelled" && (
                 <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
                   <div className="flex">
                     <div className="flex-shrink-0">
@@ -527,12 +591,12 @@ function Orders(props) {
             
               <div className="px-5 pt-6">
    
-                {cartData?.status === "Completed" && (
-                  <div className="bg-green-50 border-l-4 border-custom-orange p-4 mb-4">
+                {(cartData?.status === "delivered" || cartData?.isDelivered) && (
+                  <div className="bg-green-50 border-l-4 border-green-500 p-4 mb-4">
                     <div className="flex">
                       <div className="flex-shrink-0">
                         <svg
-                          className="h-5 w-5 text-custom-orange"
+                          className="h-5 w-5 text-green-500"
                           viewBox="0 0 20 20"
                           fill="currentColor"
                         >
@@ -544,8 +608,55 @@ function Orders(props) {
                         </svg>
                       </div>
                       <div className="ml-3">
-                        <p className="text-sm text-custom-orange font-medium">
+                        <p className="text-sm text-green-700 font-medium">
                           Order has been delivered successfully
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {cartData?.status === "shipped" && (
+                  <div className="bg-indigo-50 border-l-4 border-indigo-500 p-4 mb-4">
+                    <div className="flex">
+                      <div className="flex-shrink-0">
+                        <svg
+                          className="h-5 w-5 text-indigo-500"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+                          <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
+                        </svg>
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm text-indigo-700 font-medium">
+                          Order has been shipped and is on the way
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {cartData?.status === "processing" && (
+                  <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
+                    <div className="flex">
+                      <div className="flex-shrink-0">
+                        <svg
+                          className="h-5 w-5 text-blue-500"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm text-blue-700 font-medium">
+                          Order is being processed
                         </p>
                       </div>
                     </div>
@@ -606,14 +717,31 @@ function Orders(props) {
               </div>
               
               <button 
-                className="w-full py-3 rounded-lg text-white text-lg font-bold mt-4"
+                className="w-full py-3 rounded-lg text-white text-lg font-bold mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ backgroundColor: BRAND_COLOR }}
+                disabled={cartData?.isDelivered || cartData?.status === 'shipped' || cartData?.status === 'delivered'}
                 onClick={() => {
-                  // Add any action you want when clicking the button
-                  // For example: Mark as Shipped, Print Invoice, etc.
+                  Swal.fire({
+                    title: 'Mark as Shipped?',
+                    text: 'Are you sure you want to mark this order as shipped?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Yes, mark as shipped!',
+                    cancelButtonText: 'Cancel'
+                  }).then((result) => {
+                    if (result.isConfirmed) {
+                      handleMarkAsShipped(cartData._id);
+                    }
+                  });
                 }}
               >
-                {cartData?.isDelivered ? 'Order Completed' : 'Mark as Shipped'}
+                {cartData?.isDelivered || cartData?.status === 'delivered' 
+                  ? 'Order Completed' 
+                  : cartData?.status === 'shipped' 
+                    ? 'Already Shipped' 
+                    : 'Mark as Shipped'}
               </button>
             </div>
           </div>

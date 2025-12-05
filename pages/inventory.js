@@ -2,7 +2,6 @@ import React, { useMemo, useState, useEffect, useContext } from "react";
 import Table from "@/components/table";
 import { FiEdit, FiEye, FiX } from "react-icons/fi";
 import { RiDeleteBinLine } from "react-icons/ri";
-import { FaCopy } from "react-icons/fa";
 import { Api } from "@/services/service";
 import { useRouter } from "next/router";
 import Swal from "sweetalert2";
@@ -14,12 +13,10 @@ import { toast } from "react-toastify";
 function Inventory(props) {
   const router = useRouter();
   const [productsList, setProductsList] = useState([]);
-  const [user, setUser] = useContext(userContext);
+  const [user] = useContext(userContext);
 
-  const [selectedNewSeller, setSelectedNewSeller] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [themeData, setThemeData] = useState([]);
   const [viewProduct, setViewProduct] = useState(null);
   const [showProductModal, setShowProductModal] = useState(false);
 
@@ -357,12 +354,10 @@ function Inventory(props) {
       },
       {
         Header: "Price",
-        // accessor: "price",
         Cell: price,
       },
       {
         Header: "Unit",
-        // accessor: "pieces",
         Cell: piece,
       },
       {
@@ -375,44 +370,78 @@ function Inventory(props) {
         Cell: actionHandler,
       },
     ],
-    [themeData]
+    []
   );
 
-  const deleteProduct = (_id) => {
-    Swal.fire({
-      text: "Are you sure? You want to proceed with the delete?",
-      showCancelButton: true,
-      cancelButtonColor: "#127300",
-      confirmButtonText: "Delete",
-      confirmButtonColor: "#127300",
-      width: "380px",
-    }).then(function (result) {
-      if (result.isConfirmed) {
-        const data = {
-          _id,
-        };
+  const deleteProduct = async (_id) => {
+    try {
+      // First check if product is in flash sale
+      props.loader(true);
+      const checkRes = await Api("delete", `product/deleteProduct/${_id}`, {}, router);
+      props.loader(false);
 
-        props.loader(true);
-        Api("delete", `product/deleteProduct/${_id}`, data, router).then(
-          (res) => {
-            console.log("res================>", res.data?.message);
-            props.loader(false);
-
-            if (res?.status) {
-              getProduct(currentPage);
-              toast.success(res?.data?.message || "Product deleted successfully")
-            } else {
-              toast.error(res?.data?.message || "Failed to delete product")
-            }
-          },
-          (err) => {
-            props.loader(false);
-            console.log(err);
-            toast.error(err?.data?.message || err?.message)
+      // If requires confirmation for flash sale
+      if (checkRes?.data?.requiresConfirmation) {
+        Swal.fire({
+          title: "Warning!",
+          html: `
+            <div style="text-align: left;">
+              <p style="margin-bottom: 10px;">This product is currently in <strong>${checkRes.data.flashSaleCount}</strong> flash sale(s).</p>
+              <p style="margin-bottom: 10px;">If you delete this product, the associated flash sale(s) will also be deleted.</p>
+              <p style="color: #d33; font-weight: bold;">Are you sure you want to proceed?</p>
+            </div>
+          `,
+          icon: "warning",
+          showCancelButton: true,
+          cancelButtonColor: "#6c757d",
+          confirmButtonText: "Yes, Delete Product & Flash Sale",
+          cancelButtonText: "Cancel",
+          confirmButtonColor: "#d33",
+          width: "450px",
+        }).then(async function (result) {
+          if (result.isConfirmed) {
+            // Confirm deletion with flash sale
+            props.loader(true);
+            Api("delete", `product/deleteProduct/${_id}`, { confirmFlashSaleDelete: true }, router).then(
+              (res) => {
+                props.loader(false);
+                if (res?.status) {
+                  getProduct(currentPage);
+                  toast.success(res?.data?.message || "Product and flash sale deleted successfully");
+                } else {
+                  toast.error(res?.data?.message || "Failed to delete product");
+                }
+              },
+              (err) => {
+                props.loader(false);
+                toast.error(err?.data?.message || err?.message);
+              }
+            );
           }
-        );
+        });
+      } else if (checkRes?.status) {
+        // Product not in flash sale, show normal confirmation
+        Swal.fire({
+          text: "Are you sure you want to delete this product?",
+          showCancelButton: true,
+          cancelButtonColor: "#6c757d",
+          confirmButtonText: "Delete",
+          confirmButtonColor: "#d33",
+          width: "380px",
+        }).then(function (result) {
+          if (result.isConfirmed) {
+            getProduct(currentPage);
+            toast.success(checkRes?.data?.message || "Product deleted successfully");
+          }
+        });
+      } else {
+        toast.error(checkRes?.data?.message || "Failed to delete product");
       }
-    });
+    } catch (err) {
+      props.loader(false);
+      console.log(err);
+      toast.error(err?.data?.message || err?.message);
+    }
   };
 
   return (
