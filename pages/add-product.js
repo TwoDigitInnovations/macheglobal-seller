@@ -55,6 +55,7 @@ function Products(props) {
     short_description: "",
     long_description: "",
     Quantity: "",
+    is_manufacturer_product: false,
   });
   
   // Use ref to store editor instance and content
@@ -211,7 +212,8 @@ function Products(props) {
             short_description: product.short_description || "",
             long_description: product.long_description || "",
             Attribute: product.Attribute || [],
-            varients: product.varients || []
+            varients: product.varients || [],
+            is_manufacturer_product: product.is_manufacturer_product || false
           });
 
 
@@ -337,6 +339,7 @@ function Products(props) {
             gender: "",
             short_description: "",
             long_description: "",
+            is_manufacturer_product: false,
           });
 
           setvarients([
@@ -408,6 +411,7 @@ function Products(props) {
             themeName: "",
             decoration_method: [],
             decoration_location: [],
+            is_manufacturer_product: false,
           });
 
           setvarients([
@@ -515,10 +519,10 @@ function Products(props) {
       subCategoryName: "",
       name: "",
       img: "",
-
       gender: "",
       short_description: "",
       long_description: "",
+      is_manufacturer_product: false,
     });
 
     setvarients([
@@ -632,6 +636,29 @@ function Products(props) {
                     <option value="Unisex" className="p-5">
                       Unisex
                     </option>
+                  </select>
+                </div>
+              </div>
+              
+              <div className="flex flex-col justify-start items-start">
+                <p className="text-gray-800 text-sm font-semibold NunitoSans pb-2">
+                  Product Type <span className="text-red-500">*</span>
+                </p>
+                <div className="w-full">
+                  <select
+                    name="is_manufacturer_product"
+                    onChange={(e) => {
+                      setProductsData({
+                        ...productsData,
+                        is_manufacturer_product: e.target.value === 'true'
+                      });
+                    }}
+                    value={productsData.is_manufacturer_product.toString()}
+                    className="w-full md:py-[14px] py-2 px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040] outline-none rounded-[8px] font-normal md:text-[16px] text-[14px] text-black"
+                    required
+                  >
+                    <option value="false">General Product (Marketplace)</option>
+                    <option value="true">Manufacturer Product</option>
                   </select>
                 </div>
               </div>

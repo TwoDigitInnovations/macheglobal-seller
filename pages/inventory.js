@@ -19,6 +19,7 @@ function Inventory(props) {
   const [currentPage, setCurrentPage] = useState(1);
   const [viewProduct, setViewProduct] = useState(null);
   const [showProductModal, setShowProductModal] = useState(false);
+  const [activeTab, setActiveTab] = useState("all"); // all, general, manufacturer
 
   const [pagination, setPagination] = useState({
     totalPages: 1,
@@ -30,7 +31,7 @@ function Inventory(props) {
     if (user?._id) {
       getProduct(currentPage);
     }
-  }, [user, currentPage, searchTerm]); // 👈 searchTerm added
+  }, [user, currentPage, searchTerm, activeTab]); // activeTab added
 
   const getProduct = async (page = 1, limit = 10) => {
     props.loader(true);
@@ -38,6 +39,13 @@ function Inventory(props) {
 
     if (searchTerm) {
       url += `&searchTerm=${encodeURIComponent(searchTerm)}`;
+    }
+
+    // Add filter based on active tab
+    if (activeTab === "general") {
+      url += `&is_manufacturer_product=false`;
+    } else if (activeTab === "manufacturer") {
+      url += `&is_manufacturer_product=true`;
     }
 
     Api("get", url, {}, router).then(
@@ -468,6 +476,49 @@ function Inventory(props) {
                 onClick={() => router.push("/add-product")}
               >
                 Add Product
+              </button>
+            </div>
+
+            {/* Product Type Tabs */}
+            <div className="bg-white mt-3 rounded-md p-2 flex gap-2">
+              <button
+                className={`px-6 py-2 rounded-md font-medium transition-all ${
+                  activeTab === "all"
+                    ? "bg-custom-orange text-black"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+                onClick={() => {
+                  setActiveTab("all");
+                  setCurrentPage(1);
+                }}
+              >
+                All Products
+              </button>
+              <button
+                className={`px-6 py-2 rounded-md font-medium transition-all ${
+                  activeTab === "general"
+                    ? "bg-custom-orange text-black"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+                onClick={() => {
+                  setActiveTab("general");
+                  setCurrentPage(1);
+                }}
+              >
+                General Products
+              </button>
+              <button
+                className={`px-6 py-2 rounded-md font-medium transition-all ${
+                  activeTab === "manufacturer"
+                    ? "bg-custom-orange text-black"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+                onClick={() => {
+                  setActiveTab("manufacturer");
+                  setCurrentPage(1);
+                }}
+              >
+                Manufacturer Products
               </button>
             </div>
 

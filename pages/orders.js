@@ -139,6 +139,47 @@ function Orders(props) {
     }
   };
 
+  const handleUpdateOrderStatus = async (orderId, status) => {
+    try {
+      props.loader && props.loader(true);
+      
+      const response = await Api(
+        "post",
+        "orders/updateStatus",
+        { id: orderId, status },
+        router
+      );
+
+      if (response?.status) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Success!',
+          text: `Order ${status} successfully${status === 'cancelled' || status === 'returned' ? '. Amount refunded to credit balance.' : ''}`,
+          timer: 2000,
+          showConfirmButton: false
+        });
+        
+        closeDrawer();
+        getOrderBySeller(selctDate, currentPage, 10, orderId);
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: response?.message || 'Failed to update order status'
+        });
+      }
+    } catch (err) {
+      console.error("Error updating order status:", err);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: err?.message || 'Failed to update order status'
+      });
+    } finally {
+      props.loader && props.loader(false);
+    }
+  };
+
   const handleMarkAsShipped = async (orderId) => {
     try {
       props.loader && props.loader(true);
@@ -716,33 +757,90 @@ function Orders(props) {
                 </div>
               </div>
               
-              <button 
-                className="w-full py-3 rounded-lg text-white text-lg font-bold mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ backgroundColor: BRAND_COLOR }}
-                disabled={cartData?.isDelivered || cartData?.status === 'shipped' || cartData?.status === 'delivered'}
-                onClick={() => {
-                  Swal.fire({
-                    title: 'Mark as Shipped?',
-                    text: 'Are you sure you want to mark this order as shipped?',
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonColor: '#3085d6',
-                    cancelButtonColor: '#d33',
-                    confirmButtonText: 'Yes, mark as shipped!',
-                    cancelButtonText: 'Cancel'
-                  }).then((result) => {
-                    if (result.isConfirmed) {
-                      handleMarkAsShipped(cartData._id);
-                    }
-                  });
-                }}
-              >
-                {cartData?.isDelivered || cartData?.status === 'delivered' 
-                  ? 'Order Completed' 
-                  : cartData?.status === 'shipped' 
-                    ? 'Already Shipped' 
-                    : 'Mark as Shipped'}
-              </button>
+              <div className="space-y-3 mt-4">
+                {/* Show status update buttons only if order is not cancelled or returned */}
+                {cartData?.status !== 'cancelled' && cartData?.status !== 'returned' && (
+                  <>
+                    {/* Mark as Shipped Button */}
+                    {cartData?.status !== 'shipped' && cartData?.status !== 'delivered' && (
+                      <button 
+                        className="w-full py-3 rounded-lg text-white text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{ backgroundColor: '#9C27B0' }}
+                        onClick={() => {
+                          Swal.fire({
+                            title: 'Mark as Shipped?',
+                            text: 'Are you sure you want to mark this order as shipped?',
+                            icon: 'question',
+                            showCancelButton: true,
+                            confirmButtonColor: '#3085d6',
+                            cancelButtonColor: '#d33',
+                            confirmButtonText: 'Yes, mark as shipped!',
+                            cancelButtonText: 'Cancel'
+                          }).then((result) => {
+                            if (result.isConfirmed) {
+                              handleMarkAsShipped(cartData._id);
+                            }
+                          });
+                        }}
+                      >
+                        Mark as Shipped
+                      </button>
+                    )}
+
+                    {/* Mark as Delivered Button */}
+                    {cartData?.status === 'shipped' && cartData?.status !== 'delivered' && (
+                      <button 
+                        className="w-full py-3 rounded-lg text-white text-lg font-bold"
+                        style={{ backgroundColor: '#4CAF50' }}
+                        onClick={() => {
+                          Swal.fire({
+                            title: 'Mark as Delivered?',
+                            text: 'Are you sure you want to mark this order as delivered?',
+                            icon: 'question',
+                            showCancelButton: true,
+                            confirmButtonColor: '#4CAF50',
+                            cancelButtonColor: '#d33',
+                            confirmButtonText: 'Yes, mark as delivered!',
+                            cancelButtonText: 'Cancel'
+                          }).then((result) => {
+                            if (result.isConfirmed) {
+                              handleUpdateOrderStatus(cartData._id, 'delivered');
+                            }
+                          });
+                        }}
+                      >
+                        Mark as Delivered
+                      </button>
+                    )}
+                  </>
+                )}
+
+                {/* Status Display for Completed/Cancelled/Returned Orders */}
+                {(cartData?.status === 'delivered' || cartData?.status === 'cancelled' || cartData?.status === 'returned') && (
+                  <div className="w-full py-3 rounded-lg text-center font-semibold" style={{ 
+                    backgroundColor: cartData?.status === 'delivered' ? '#E8F5E9' : '#FFEBEE',
+                    color: cartData?.status === 'delivered' ? '#4CAF50' : '#F44336'
+                  }}>
+                    {cartData?.status === 'delivered' ? '✓ Order Completed' : 
+                     cartData?.status === 'cancelled' ? '✗ Order Cancelled' : 
+                     '↩ Order Returned'}
+                    {cartData?.refundedToCredit && (
+                      <div className="text-sm mt-1">
+                        Refunded ${cartData?.refundAmount?.toFixed(2) || '0.00'} to customer
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Close Button */}
+                <button 
+                  className="w-full py-3 rounded-lg border-2 text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
+                  style={{ borderColor: BRAND_COLOR }}
+                  onClick={() => setOpenCart(false)}
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </Drawer>
