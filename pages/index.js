@@ -238,22 +238,22 @@ function Home(props) {
 
             {/* Buttons */}
             <div className="flex flex-col gap-3">
-              <button className="flex items-center gap-3 px-4 py-3 rounded-xl bg-orange-100 text-black font-medium shadow-sm hover:bg-orange-200 transition">
+              <button onClick={()=> router.push('/add-product')} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-orange-100 text-black font-medium shadow-sm hover:bg-orange-200 transition">
                 <Plus className="w-5 h-5" />
                 Add New Product
               </button>
 
-              <button className="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-300 text-black font-medium shadow-sm hover:bg-gray-100 transition">
+              <button onClick={()=> router.push('/orders')} className="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-300 text-black font-medium shadow-sm hover:bg-gray-100 transition">
                 <Boxes className="w-5 h-5" />
                 View Orders
               </button>
 
-              <button className="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-300 text-black font-medium shadow-sm hover:bg-gray-100 transition">
+              <button onClick={()=> router.push('/sellerWallet')} className="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-300 text-black font-medium shadow-sm hover:bg-gray-100 transition">
                 <BanknoteArrowDown className="w-5 h-5" />
                 Withdraw Earnings
               </button>
 
-              <button className="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-300 text-black font-medium shadow-sm hover:bg-gray-100 transition">
+              <button onClick={()=> router.push('/myProfile')} className="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-300 text-black font-medium shadow-sm hover:bg-gray-100 transition">
                 <Pencil className="w-5 h-5" />
                 Edit Store Profile
               </button>
