@@ -71,13 +71,17 @@ const Navbar = ({ setOpenTab, openTab }) => {
               <button
                 className="flex items-center space-x-3 bg-white hover:bg-gray-50 px-4 py-2 rounded-lg transition-colors duration-200"
               >
-                <div>
+                {/* Search Input - Commented Out */}
+                {/* <div>
                   <input
                     className="w-[20rem] bg-white border-black border text-black rounded-3xl px-4 py-2"
                     placeholder="Search"
                   />
-                </div>
-                <p className="p-2 bg-custom-lightgold rounded-full"><Bell className="text-black" /> </p>
+                </div> */}
+                
+                {/* Bell Icon - Commented Out */}
+                {/* <p className="p-2 bg-custom-lightgold rounded-full"><Bell className="text-black" /> </p> */}
+                
                 <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-black flex-shrink-0"
                   onClick={() => setDropdownOpen(!dropdownOpen)}
                 >

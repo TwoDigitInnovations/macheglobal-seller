@@ -544,6 +544,7 @@ function AddSale(props) {
                     onChange={(e) =>
                       updateSaleItem(index, "startDateTime", e.target.value)
                     }
+                    min={new Date().toISOString().slice(0, 16)}
                     className="block w-full border border-gray-300 rounded-lg shadow-sm p-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-custom-orange/20 focus:border-custom-orange transition-colors"
                   />
                 </div>
@@ -559,7 +560,7 @@ function AddSale(props) {
                     onChange={(e) =>
                       updateSaleItem(index, "endDateTime", e.target.value)
                     }
-                    min={item.startDateTime}
+                    min={item.startDateTime || new Date().toISOString().slice(0, 16)}
                     className="block w-full border border-gray-300 rounded-lg shadow-sm p-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-custom-orange/20 focus:border-custom-orange transition-colors"
                   />
                 </div>

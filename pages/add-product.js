@@ -246,13 +246,31 @@ function Products(props) {
       selectedCategoryObj ? selectedCategoryObj.Subcategory : []
     );
 
+    // Parse attributes if they are stringified
+    let parsedAttributes = selectedCategoryObj?.Attribute || [];
+    if (parsedAttributes.length > 0 && typeof parsedAttributes[0] === 'string') {
+      try {
+        parsedAttributes = parsedAttributes.map(attr => {
+          let parsed = attr;
+          // Parse multiple times if needed
+          while (typeof parsed === 'string') {
+            parsed = JSON.parse(parsed);
+          }
+          return Array.isArray(parsed) ? parsed : [parsed];
+        }).flat();
+      } catch (e) {
+        console.error('Error parsing attributes:', e);
+        parsedAttributes = [];
+      }
+    }
+
     setProductsData({
       ...productsData,
       category: selectedCategoryId,
       categoryName: selectedCategoryObj ? selectedCategoryObj.name : "",
       subcategory: "",
       subCategoryName: "",
-      Attribute: selectedCategoryObj?.Attribute || [],
+      Attribute: parsedAttributes,
     });
   };
 
@@ -263,10 +281,28 @@ function Products(props) {
       (subcategory) => subcategory._id === selectedSubCategoryId
     );
 
+    // Parse attributes if they are stringified
+    let parsedAttributes = selectedSubCategoryObj?.Attribute || [];
+    if (parsedAttributes.length > 0 && typeof parsedAttributes[0] === 'string') {
+      try {
+        parsedAttributes = parsedAttributes.map(attr => {
+          let parsed = attr;
+          // Parse multiple times if needed
+          while (typeof parsed === 'string') {
+            parsed = JSON.parse(parsed);
+          }
+          return Array.isArray(parsed) ? parsed : [parsed];
+        }).flat();
+      } catch (e) {
+        console.error('Error parsing attributes:', e);
+        parsedAttributes = [];
+      }
+    }
+
     setProductsData((prev) => ({
       ...prev,
       subcategory: selectedSubCategoryId,
-      Attribute: selectedSubCategoryObj?.Attribute || [],
+      Attribute: parsedAttributes,
       subCategoryName: selectedSubCategoryObj
         ? selectedSubCategoryObj.name
         : "",
@@ -914,15 +950,40 @@ function Products(props) {
                           <p
                             className=" py-2 px-4 flex justify-center  items-center gap-2 text-black font-normal text-center text-base"
                             onClick={() => {
+                              console.log("Add More clicked!");
+                              console.log("productsData.Attribute:", productsData?.Attribute);
+                              console.log("selectedColor:", selectedColor);
+                              
+                              // Parse attributes if they are still strings
+                              let parsedAttributes = productsData?.Attribute || [];
+                              if (parsedAttributes.length > 0 && typeof parsedAttributes[0] === 'string') {
+                                try {
+                                  parsedAttributes = parsedAttributes.map(attr => {
+                                    let parsed = attr;
+                                    // Parse multiple times if needed
+                                    while (typeof parsed === 'string') {
+                                      parsed = JSON.parse(parsed);
+                                    }
+                                    return Array.isArray(parsed) ? parsed : [parsed];
+                                  }).flat();
+                                  console.log("Parsed attributes:", parsedAttributes);
+                                } catch (e) {
+                                  console.error('Error parsing attributes:', e);
+                                  parsedAttributes = [];
+                                }
+                              }
+                              
                               const newAttrGroup = {
-                                attributes: productsData?.Attribute?.map(attr => ({
-                                  label: attr.name,
-                                  value: attr.name.toLowerCase() === "color" ? selectedColor || "" : "",
-                                })),
+                                attributes: parsedAttributes?.map(attr => ({
+                                  label: attr?.name || "",
+                                  value: attr?.name?.toLowerCase() === "color" ? selectedColor || "" : "",
+                                })) || [],
                                 qty: "",
                                 price: "",
                                 offerprice: "",
                               };
+
+                              console.log("newAttrGroup:", newAttrGroup);
 
                               setvarients(
                                 produce((draft) => {

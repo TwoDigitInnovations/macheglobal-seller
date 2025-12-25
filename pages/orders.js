@@ -73,6 +73,7 @@ function Orders(props) {
     setSelctDate("");
     setCurrentPage(1);
     setOrderId("");
+    setIsDateSelectedManually(false);
   };
 
   const getOrderBySeller = async (
@@ -93,11 +94,18 @@ function Orders(props) {
     let queryParams = `pageNumber=${page}&limit=${limit}`;
     
     if (selctDate) {
-      queryParams += `&date=${moment(selctDate).format('YYYY-MM-DD')}`;
+      const formattedDate = moment(selctDate).format('YYYY-MM-DD');
+      queryParams += `&date=${formattedDate}`;
+      console.log('Date filter applied:', {
+        original: selctDate,
+        formatted: formattedDate,
+        momentObj: moment(selctDate).toISOString()
+      });
     }
 
     if (orderId) {
       queryParams += `&orderId=${orderId}`;
+      console.log('Order ID filter applied:', orderId);
     }
 
     console.log(`Fetching orders for seller: ${user._id} with params:`, { 
@@ -159,7 +167,6 @@ function Orders(props) {
           showConfirmButton: false
         });
         
-        closeDrawer();
         getOrderBySeller(selctDate, currentPage, 10, orderId);
       } else {
         Swal.fire({
@@ -199,9 +206,6 @@ function Orders(props) {
           timer: 2000,
           showConfirmButton: false
         });
-        
-        // Close drawer
-        closeDrawer();
         
         // Refresh orders list
         getOrderBySeller(selctDate, currentPage);
@@ -398,8 +402,15 @@ function Orders(props) {
   );
 
   const formatDate = (date) => {
-    if (!date || isNaN(new Date(date))) return "";
-    return new Date(date).toISOString().split("T")[0];
+    if (!date) return "";
+    // If date is already a string in YYYY-MM-DD format, return it
+    if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return date;
+    }
+    // Otherwise try to parse it as a Date object
+    const dateObj = new Date(date);
+    if (isNaN(dateObj.getTime())) return "";
+    return dateObj.toISOString().split("T")[0];
   };
 
   return (
@@ -453,8 +464,9 @@ function Orders(props) {
                   type="date"
                   value={formatDate(selctDate)}
                   onChange={(e) => {
-                    const selected = new Date(e.target.value);
-                    setSelctDate(selected);
+                    const dateValue = e.target.value; // This is in YYYY-MM-DD format
+                    console.log('Date selected:', dateValue);
+                    setSelctDate(dateValue);
                     setIsDateSelectedManually(true);
                   }}
                 />
@@ -767,6 +779,11 @@ function Orders(props) {
                         className="w-full py-3 rounded-lg text-white text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{ backgroundColor: '#9C27B0' }}
                         onClick={() => {
+                          // Close the drawer first
+                          const orderIdToShip = cartData._id;
+                          closeDrawer();
+                          
+                          // Then show the confirmation dialog
                           Swal.fire({
                             title: 'Mark as Shipped?',
                             text: 'Are you sure you want to mark this order as shipped?',
@@ -778,7 +795,7 @@ function Orders(props) {
                             cancelButtonText: 'Cancel'
                           }).then((result) => {
                             if (result.isConfirmed) {
-                              handleMarkAsShipped(cartData._id);
+                              handleMarkAsShipped(orderIdToShip);
                             }
                           });
                         }}
@@ -793,6 +810,11 @@ function Orders(props) {
                         className="w-full py-3 rounded-lg text-white text-lg font-bold"
                         style={{ backgroundColor: '#4CAF50' }}
                         onClick={() => {
+                          // Close the drawer first
+                          const orderIdToDeliver = cartData._id;
+                          closeDrawer();
+                          
+                          // Then show the confirmation dialog
                           Swal.fire({
                             title: 'Mark as Delivered?',
                             text: 'Are you sure you want to mark this order as delivered?',
@@ -804,7 +826,7 @@ function Orders(props) {
                             cancelButtonText: 'Cancel'
                           }).then((result) => {
                             if (result.isConfirmed) {
-                              handleUpdateOrderStatus(cartData._id, 'delivered');
+                              handleUpdateOrderStatus(orderIdToDeliver, 'delivered');
                             }
                           });
                         }}
