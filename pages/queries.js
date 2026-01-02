@@ -89,9 +89,35 @@ function Queries(props) {
   };
 
   const handleReset = () => {
+    console.log('Reset button clicked');
+    // First reset the search params
+    const emptyParams = { name: '', email: '' };
+    setSearchParams(emptyParams);
     setSelectedDate('');
-    setSearchParams({ name: '', email: '' });
-    setCurrentPage(1)
+    
+    // Force immediate fetch with empty data
+    const fetchWithEmptyParams = async () => {
+      setIsLoading(true);
+      props.loader(true);
+      
+      try {
+        const res = await Api("post", `user/getContactUs?page=1&limit=10`, {}, router);
+        props.loader(false);
+        setIsLoading(false);
+        
+        if (res?.status) {
+          setQueries(res?.data);
+          setPagination(res?.pagination);
+          setCurrentPage(1);
+        }
+      } catch (err) {
+        props.loader(false);
+        setIsLoading(false);
+        toast.error(err?.data?.message || err?.message || "An error occurred");
+      }
+    };
+    
+    fetchWithEmptyParams();
   };
 
   const handleFilterChange = (e) => {
@@ -303,12 +329,12 @@ function Queries(props) {
               </button>
 
               <button
+                type="button"
                 onClick={handleReset}
                 className="flex items-center justify-center text-[14px] px-5 py-2 border border-black  bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-all"
               >
-
-                Reset
                 <ListRestart size={18} className="mr-2" />
+                Reset
               </button>
             </div>
           </div>

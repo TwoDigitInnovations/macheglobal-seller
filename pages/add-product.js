@@ -1,109 +1,118 @@
-import Table from "@/components/table";
-import { Api, ApiFormData } from "../services/service";
-import React, { useState, useMemo, useEffect, useRef, useContext, useCallback } from "react";
+import React, { useState, useEffect, useContext, useRef, useMemo, useCallback } from "react";
 import { useRouter } from "next/router";
-import { MdOutlineFileUpload } from "react-icons/md";
-import { ColorPicker, useColor } from "react-color-palette";
-import "react-color-palette/css";
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogActions from "@mui/material/DialogActions";
-import _ from "underscore";
-import { produce } from "immer";
-import { IoCloseCircleOutline } from "react-icons/io5";
-const JoditEditor = dynamic(() => import("jodit-react"), { ssr: false });
 import dynamic from "next/dynamic";
-import Compressor from "compressorjs";
-import { Ban, CirclePlus, Plus, SendHorizontal } from "lucide-react";
+import { Api, ApiFormData } from "../services/service";
 import { userContext } from "./_app";
 import { toast } from "react-toastify";
+import Compressor from "compressorjs";
+import { 
+  Plus, 
+  Trash2, 
+  Upload, 
+  X, 
+  Save, 
+  ArrowLeft,
+  Package,
+  Layers,
+  Image as ImageIcon,
+  CirclePlus,
+  Ban,
+  SendHorizontal
+} from "lucide-react";
+import { MdOutlineFileUpload } from "react-icons/md";
+import { IoCloseCircleOutline } from "react-icons/io5";
+import produce from "immer";
+import { Dialog, DialogTitle, DialogContent, DialogActions } from "@mui/material";
+import { ColorPicker } from "react-color-palette";
 
-const config = {
+const JoditEditor = dynamic(() => import("jodit-react"), { ssr: false });
+
+// Editor Config
+const editorConfig = {
   readonly: false,
-  height: 500,
+  height: 400,
   toolbarAdaptive: true,
-  toolbarSticky: true,
   showCharsCounter: true,
   showWordsCounter: true,
-  showXPathInStatusbar: true,
   buttons: [
-    "source", "|",
-    "bold", "italic", "underline", "strikethrough", "|",
-    "superscript", "subscript", "|",
-    "ul", "ol", "outdent", "indent", "|",
-    "font", "fontsize", "brush", "paragraph", "|",
-    "image", "file", "video", "table", "link", "hr", "|",
-    "align", "undo", "redo", "cut", "copy", "paste", "|",
-    "selectall", "find", "replace", "|",
-    "fullsize", "preview", "print", "about", "spellcheck"
+    "bold", "italic", "underline", "|",
+    "ul", "ol", "|",
+    "font", "fontsize", "|",
+    "align", "undo", "redo", "|",
+    "image", "link"
   ],
 };
 
 function Products(props) {
   const router = useRouter();
-  const fileRefs = useRef([]);
+  const [user] = useContext(userContext);
+  const editorRef = useRef(null);
+  const fileInputRef = useRef(null);
 
-  const [productsData, setProductsData] = useState({
+  // ============ STATE MANAGEMENT ============
+  
+  // Basic Product Info
+  const [productData, setProductData] = useState({
+    name: "",
     category: "",
-    subcategory: "",
     categoryName: "",
-    parameter_type: "",
+    subcategory: "",
     subCategoryName: "",
     gender: "",
-    name: "",
     short_description: "",
     long_description: "",
-    Quantity: "",
     is_manufacturer_product: false,
+    productType: "simple", // 'simple' or 'variable'
   });
+
+  // Simple Product Data
+  const [simpleProduct, setSimpleProduct] = useState({
+    price: "",
+    offerPrice: "",
+    stock: "",
+    sku: "",
+    images: []
+  });
+
+  // Variable Product Data (New Professional Structure)
+  const [varients, setvarients] = useState([{
+    color: "",
+    image: [],
+    selected: [],
+  }]);
   
-  // Use ref to store editor instance and content
-  const editorRef = useRef(null);
-  const isTyping = useRef(false);
-  
-  // Memoize the editor config to prevent re-renders
-  const editorConfig = useMemo(() => ({
-    ...config,
-    readonly: false,
-    placeholder: "Start writing...",
-  }), []); // Remove dependency to prevent re-renders
-
-  // Handle editor content change - update state without re-rendering editor
-  const handleEditorBlur = useCallback((newContent) => {
-    isTyping.current = false;
-    setProductsData(prev => {
-      // Only update if content actually changed
-      if (prev.long_description !== newContent) {
-        return {
-          ...prev,
-          long_description: newContent
-        };
-      }
-      return prev;
-    });
-  }, []);
-
-  const [varients, setvarients] = useState([
-    {
-      color: "",
-      image: [],
-      selected: [],
-    },
-  ]);
-
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [color, setColor] = useColor("#000000");
-  const [user] = useContext(userContext)
-  const [openPopup, setOpenPopup] = useState(false);
+  // Categories
   const [categoryData, setCategoryData] = useState([]);
-  const forms = useRef();
-  const [singleImgs, setSingleImgs] = useState("");
-  const [value, setValue] = useState("");
-  const [filterCategoryData, setFilterCategoryData] = useState([]);
-  const [filteredSubCategories, setFilteredSubCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [selectedColor, setSelectedColor] = useState(null);
+  const [filteredSubCategories, setFilteredSubCategories] = useState([]);
+  const [productsData, setProductsData] = useState({
+    category: "",
+    categoryName: "",
+    subcategory: "",
+    subCategoryName: "",
+    name: "",
+    gender: "",
+    parameter_type: "",
+    short_description: "",
+    long_description: "",
+    Attribute: [],
+    varients: [],
+    is_manufacturer_product: false
+  });
+
+  // UI State
+  const [loading, setLoading] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [currentImageUpload, setCurrentImageUpload] = useState(null);
+  const [singleImgs, setSingleImgs] = useState([]);
+  const [openPopup, setOpenPopup] = useState(false);
+  const [color, setColor] = useState({ hex: "#000000" });
+  const [selectedColor, setSelectedColor] = useState("");
+  const [currentIndex, setCurrentIndex] = useState(0);
+  
+  // Refs
+  const fileRefs = useRef([]);
+  const forms = useRef(null);
 
   useEffect(() => {
     getCategory();
@@ -158,7 +167,7 @@ function Products(props) {
         ]);
       }
     }
-  }, [productsData?.Attribute]);
+  }, [productData?.Attribute]);
 
 
   useEffect(() => {
@@ -200,7 +209,15 @@ function Products(props) {
         props.loader(false);
         if (res?.data) {
           const product = res.data;
+          
+          console.log("=== PRODUCT LOADED FROM BACKEND ===");
+          console.log("Full product data:", product);
+          console.log("product.varients:", product.varients);
+          console.log("product.variants:", product.variants);
+          console.log("product.simpleProduct:", product.simpleProduct);
+          console.log("product.productType:", product.productType);
 
+          // Set productsData (legacy)
           setProductsData({
             category: product.category || "",
             categoryName: product.categoryName || "",
@@ -216,6 +233,60 @@ function Products(props) {
             is_manufacturer_product: product.is_manufacturer_product || false
           });
 
+          // Determine product type
+          let detectedProductType = "simple";
+          if (product.productType) {
+            // Use productType from backend if available
+            detectedProductType = product.productType;
+          } else if (product.simpleProduct && Object.keys(product.simpleProduct).length > 0) {
+            // If simpleProduct exists and has data
+            detectedProductType = "simple";
+          } else if (product.varients && product.varients.length > 0) {
+            // If varients exist (legacy)
+            detectedProductType = "variable";
+          } else if (product.variants && product.variants.length > 0) {
+            // If variants exist (new structure)
+            detectedProductType = "variable";
+          }
+
+          // Set productData (main form state)
+          setProductData({
+            category: product.category || "",
+            categoryName: product.categoryName || "",
+            subcategory: product.subcategory || "",
+            subCategoryName: product.subCategoryName || "",
+            name: product.name || "",
+            gender: product.gender || "",
+            short_description: product.short_description || "",
+            long_description: product.long_description || "",
+            is_manufacturer_product: product.is_manufacturer_product || false,
+            productType: detectedProductType
+          });
+
+          // If simple product, populate simpleProduct state
+          if (product.simpleProduct) {
+            setSimpleProduct({
+              price: product.simpleProduct.price || "",
+              offerPrice: product.simpleProduct.offerPrice || "",
+              stock: product.simpleProduct.stock || "",
+              sku: product.simpleProduct.sku || "",
+              images: product.simpleProduct.images || []
+            });
+          }
+
+          // If variable product, populate varients
+          if (product.varients && product.varients.length > 0) {
+            console.log("Loading varients:", product.varients);
+            setvarients(product.varients);
+          } else if (detectedProductType === "variable") {
+            // If detected as variable but no varients, initialize with empty structure
+            console.log("Variable product but no varients found, initializing empty");
+            setvarients([{
+              color: "",
+              image: [],
+              selected: [],
+            }]);
+          }
 
           setSelectedCategory(product.category);
           const selectedCategory = categoryData.find(
@@ -272,6 +343,15 @@ function Products(props) {
       subCategoryName: "",
       Attribute: parsedAttributes,
     });
+    
+    // Also update productData for validation
+    setProductData({
+      ...productData,
+      category: selectedCategoryId,
+      categoryName: selectedCategoryObj ? selectedCategoryObj.name : "",
+      subcategory: "",
+      subCategoryName: "",
+    });
   };
 
   const handleSubCategoryChange = (e) => {
@@ -307,6 +387,15 @@ function Products(props) {
         ? selectedSubCategoryObj.name
         : "",
     }));
+    
+    // Also update productData for validation
+    setProductData((prev) => ({
+      ...prev,
+      subcategory: selectedSubCategoryId,
+      subCategoryName: selectedSubCategoryObj
+        ? selectedSubCategoryObj.name
+        : "",
+    }));
   };
 
 
@@ -338,67 +427,175 @@ function Products(props) {
   const createProduct = async (e) => {
     e.preventDefault();
 
-    const sumWithInitial = varients.reduce(
-      (accumulator, currentValue) =>
-        accumulator +
-        currentValue.selected.reduce(
-          (total, currentVal) =>
-            total + (Number(currentVal.qty) || 0),
-          0
-        ),
-      0
-    );
+    console.log("=== VALIDATION DEBUG ===");
+    console.log("productData:", productData);
+    console.log("productsData:", productsData);
+    console.log("selectedCategory:", selectedCategory);
 
-    const data = {
-      ...productsData,
-      varients,
+    // Validation - use selectedCategory as fallback
+    const categoryToUse = productData.category || selectedCategory;
+    
+    if (!productData.name || !categoryToUse) {
+      toast.error("Please fill all required fields");
+      return;
+    }
+
+    // Get category and subcategory names
+    const selectedCategoryObj = categoryData.find(c => c._id === categoryToUse);
+    const selectedSubcategoryObj = filteredSubCategories.find(s => s._id === (productData.subcategory || productsData.subcategory));
+
+    // Prepare data based on product type
+    const payload = {
+      ...productData,
+      category: categoryToUse,
+      categoryName: selectedCategoryObj?.name || productData.categoryName || productsData.categoryName || "",
+      subcategory: productData.subcategory || productsData.subcategory || "",
+      subCategoryName: selectedSubcategoryObj?.name || productData.subCategoryName || productsData.subCategoryName || "",
       SellerId: user._id,
-      pieces: sumWithInitial,
     };
 
-    props.loader(true);
+    if (productData.productType === 'simple') {
+      // Simple Product
+      if (!simpleProduct.price || !simpleProduct.stock) {
+        toast.error("Please enter price and stock");
+        return;
+      }
+      
+      // Validate images for simple product
+      if (!simpleProduct.images || simpleProduct.images.length === 0) {
+        toast.error("Please upload at least one product image");
+        return;
+      }
+      
+      payload.simpleProduct = {
+        price: parseFloat(simpleProduct.price),
+        offerPrice: parseFloat(simpleProduct.offerPrice) || parseFloat(simpleProduct.price),
+        stock: parseInt(simpleProduct.stock),
+        sku: simpleProduct.sku || '',
+        images: simpleProduct.images
+      };
+      payload.variants = [];
+      payload.pieces = parseInt(simpleProduct.stock);
+      
+    } else {
+      // Variable Product (Legacy support)
+      if (!varients || varients.length === 0) {
+        toast.error("Please add at least one variant");
+        return;
+      }
+      
+      // Validate that EVERY variant has at least one image
+      const variantsWithoutImages = [];
+      varients.forEach((varient, index) => {
+        if (!varient.image || varient.image.length === 0) {
+          variantsWithoutImages.push(index + 1); // Store 1-based index
+        }
+      });
+      
+      if (variantsWithoutImages.length > 0) {
+        const variantNumbers = variantsWithoutImages.join(', ');
+        toast.error(`Please upload images for variant(s): ${variantNumbers}`);
+        return;
+      }
+      
+      // Validate that every variant has at least one selected option
+      const variantsWithoutOptions = [];
+      varients.forEach((varient, index) => {
+        if (!varient.selected || varient.selected.length === 0) {
+          variantsWithoutOptions.push(index + 1);
+        }
+      });
+      
+      if (variantsWithoutOptions.length > 0) {
+        const variantNumbers = variantsWithoutOptions.join(', ');
+        toast.error(`Please add options (size/attributes) for variant(s): ${variantNumbers}`);
+        return;
+      }
+      
+      const sumWithInitial = varients.reduce(
+        (accumulator, currentValue) =>
+          accumulator +
+          currentValue.selected.reduce(
+            (total, currentVal) => total + (Number(currentVal.qty) || 0),
+            0
+          ),
+        0
+      );
+      
+      // Convert old varients structure to new variants structure
+      const convertedVariants = [];
+      varients.forEach(varient => {
+        varient.selected.forEach(sel => {
+          // Convert attributes from {label, value} to {name, value}
+          const convertedAttributes = (sel.attributes || []).map(attr => ({
+            name: attr.label || attr.name || '',
+            value: attr.value || ''
+          }));
+          
+          convertedVariants.push({
+            attributes: convertedAttributes,
+            sku: sel.sku || '',
+            images: varient.image || [],
+            price: parseFloat(sel.price) || 0,
+            offerPrice: parseFloat(sel.offerprice) || parseFloat(sel.price) || 0,
+            stock: parseInt(sel.qty) || 0,
+            isActive: true
+          });
+        });
+      });
+      
+      // Send both old and new structure for backward compatibility
+      payload.varients = varients;  // Old structure
+      payload.variants = convertedVariants;  // New structure (backend expects this)
+      payload.pieces = sumWithInitial;
+    }
 
-    console.log("data================>", data);
-    Api("post", "product/createProduct", data, router).then(
+    props.loader(true);
+    console.log("Creating product with data:", payload);
+
+    Api("post", "product/createProduct", payload, router).then(
       (res) => {
         props.loader(false);
-        console.log("res================>", res);
         if (res.status) {
-
-          setProductsData({
+          toast.success(res?.data?.message || "Product created successfully");
+          
+          // Reset form
+          setProductData({
             category: "",
             categoryName: "",
             subcategory: "",
             subCategoryName: "",
             name: "",
-            img: "",
             gender: "",
             short_description: "",
             long_description: "",
             is_manufacturer_product: false,
+            productType: "simple",
           });
-
-          setvarients([
-            {
-              color: "",
-              image: [],
-              selected: [],
-            },
-          ]);
-
-          setSelectedCategory("");
-          setFilteredSubCategories([]);
+          
+          setSimpleProduct({
+            price: "",
+            offerPrice: "",
+            stock: "",
+            sku: "",
+            images: []
+          });
+          
+          setvarients([{
+            color: "",
+            image: [],
+            selected: [],
+          }]);
 
           router.push("/inventory");
-          toast.success(res?.data?.message)
         } else {
-          toast.error(res?.data?.message)
+          toast.error(res?.data?.message || "Failed to create product");
         }
       },
       (err) => {
         props.loader(false);
-        console.log(err);
-        toast.error(res?.message)
+        console.error(err);
+        toast.error(err?.message || "An error occurred");
       }
     );
   };
@@ -406,72 +603,186 @@ function Products(props) {
   const updateProduct = async (e) => {
     e.preventDefault();
 
-    const sumWithInitial = varients.reduce(
-      (accumulator, currentValue) =>
-        accumulator +
-        currentValue.selected.reduce(
-          (total, currentVal) => total + Number(currentVal.qty),
-          0
-        ),
-      0
-    );
+    // Validation - use selectedCategory as fallback
+    const categoryToUse = productData.category || selectedCategory;
+    
+    if (!productData.name || !categoryToUse) {
+      toast.error("Please fill all required fields");
+      return;
+    }
 
-    const data = {
-      ...productsData,
-      varients,
+    // Get category and subcategory names
+    const selectedCategoryObj = categoryData.find(c => c._id === categoryToUse);
+    const selectedSubcategoryObj = filteredSubCategories.find(s => s._id === (productData.subcategory || productsData.subcategory));
+
+    // Prepare data based on product type
+    const payload = {
+      ...productData,
+      category: categoryToUse,
+      categoryName: selectedCategoryObj?.name || productData.categoryName || productsData.categoryName || "",
+      subcategory: productData.subcategory || productsData.subcategory || "",
+      subCategoryName: selectedSubcategoryObj?.name || productData.subCategoryName || productsData.subCategoryName || "",
       SellerId: user._id,
-      pieces: sumWithInitial,
       id: router.query.id,
     };
 
-    props.loader(true);
+    if (productData.productType === 'simple') {
+      // Simple Product
+      if (!simpleProduct.price || !simpleProduct.stock) {
+        toast.error("Please enter price and stock");
+        return;
+      }
+      
+      // Validate images for simple product
+      if (!simpleProduct.images || simpleProduct.images.length === 0) {
+        toast.error("Please upload at least one product image");
+        return;
+      }
+      
+      payload.simpleProduct = {
+        price: parseFloat(simpleProduct.price),
+        offerPrice: parseFloat(simpleProduct.offerPrice) || parseFloat(simpleProduct.price),
+        stock: parseInt(simpleProduct.stock),
+        sku: simpleProduct.sku || '',
+        images: simpleProduct.images
+      };
+      payload.variants = [];
+      payload.pieces = parseInt(simpleProduct.stock);
+      
+    } else {
+      // Variable Product (Legacy support)
+      console.log("Validating variable product, varients:", varients);
+      
+      // Check if varients exist and have valid data
+      const hasValidVarients = varients && varients.length > 0 && 
+        varients.some(v => v.selected && v.selected.length > 0);
+      
+      if (!hasValidVarients) {
+        toast.error("Variable products must have at least one variant");
+        return;
+      }
+      
+      // Validate that EVERY variant has at least one image
+      const variantsWithoutImages = [];
+      varients.forEach((varient, index) => {
+        if (!varient.image || varient.image.length === 0) {
+          variantsWithoutImages.push(index + 1); // Store 1-based index
+        }
+      });
+      
+      if (variantsWithoutImages.length > 0) {
+        const variantNumbers = variantsWithoutImages.join(', ');
+        toast.error(`Please upload images for variant(s): ${variantNumbers}`);
+        return;
+      }
+      
+      // Validate that every variant has at least one selected option
+      const variantsWithoutOptions = [];
+      varients.forEach((varient, index) => {
+        if (!varient.selected || varient.selected.length === 0) {
+          variantsWithoutOptions.push(index + 1);
+        }
+      });
+      
+      if (variantsWithoutOptions.length > 0) {
+        const variantNumbers = variantsWithoutOptions.join(', ');
+        toast.error(`Please add options (size/attributes) for variant(s): ${variantNumbers}`);
+        return;
+      }
+      
+      const sumWithInitial = varients.reduce(
+        (accumulator, currentValue) =>
+          accumulator +
+          currentValue.selected.reduce(
+            (total, currentVal) => total + (Number(currentVal.qty) || 0),
+            0
+          ),
+        0
+      );
+      
+      // Convert old varients structure to new variants structure
+      const convertedVariants = [];
+      varients.forEach(varient => {
+        varient.selected.forEach(sel => {
+          // Convert attributes from {label, value} to {name, value}
+          const convertedAttributes = (sel.attributes || []).map(attr => ({
+            name: attr.label || attr.name || '',
+            value: attr.value || ''
+          }));
+          
+          convertedVariants.push({
+            attributes: convertedAttributes,
+            sku: sel.sku || '',
+            images: varient.image || [],
+            price: parseFloat(sel.price) || 0,
+            offerPrice: parseFloat(sel.offerprice) || parseFloat(sel.price) || 0,
+            stock: parseInt(sel.qty) || 0,
+            isActive: true
+          });
+        });
+      });
+      
+      console.log("Converted variants:", convertedVariants);
+      
+      // Send both old and new structure for backward compatibility
+      payload.varients = varients;  // Old structure
+      payload.variants = convertedVariants;  // New structure (backend expects this)
+      payload.pieces = sumWithInitial;
+    }
 
-    Api("post", "product/updateProduct", data, router).then(
+    props.loader(true);
+    console.log("Updating product with data:", payload);
+
+    Api("post", "product/updateProduct", payload, router).then(
       (res) => {
         props.loader(false);
-        console.log("res================>", res);
 
         if (res.status) {
-          setProductsData({
-            category: "",
-            categoryName: "",
-            subcategory: "",
-            subCategoryName: "",
-            name: "",
-            price: "",
-            gender: "",
-            img: "",
-            short_description: "",
-            long_description: "",
-            theme: "",
-            themeName: "",
-            decoration_method: [],
-            decoration_location: [],
-            is_manufacturer_product: false,
-          });
-
-          setvarients([
-            {
-              color: "",
-              image: [],
-              selected: [],
-            },
-          ]);
-
-          setSelectedCategory("");
-          setFilteredSubCategories([]);
+          toast.success(res?.data?.message || "Product updated successfully");
           router.push("/inventory");
-          toast.success(res?.data?.message)
         } else {
-          toast.error(res?.data?.message)
+          toast.error(res?.data?.message || "Failed to update product");
         }
       },
       (err) => {
         props.loader(false);
-        console.log(err);
-        toast.error(res?.message)
+        console.error(err);
+        toast.error(err?.message || "An error occurred");
       }
     );
+  };
+
+  const handleImageUpload = async (file, callback) => {
+    if (!file) return;
+
+    const fileSizeInMb = file.size / (1024 * 1024);
+    if (fileSizeInMb > 2) {
+      toast.error("File too large. Maximum 2MB allowed");
+      return;
+    }
+
+    new Compressor(file, {
+      quality: 0.7,
+      success: async (compressedFile) => {
+        const formData = new FormData();
+        formData.append("file", compressedFile);
+        props.loader(true);
+
+        try {
+          const res = await ApiFormData("post", "user/fileupload", formData, router);
+          props.loader(false);
+          
+          if (res.status) {
+            const imageUrl = res.data.file || res.data.fileUrl;
+            callback(imageUrl);
+            toast.success("Image uploaded");
+          }
+        } catch (err) {
+          props.loader(false);
+          toast.error(err?.message || "Upload failed");
+        }
+      }
+    });
   };
 
   const handleImageChange = (event, index) => {
@@ -546,6 +857,13 @@ function Products(props) {
     }));
   };
 
+  const handleEditorBlur = useCallback((newContent) => {
+    setProductData((prev) => ({
+      ...prev,
+      long_description: newContent
+    }));
+  }, []);
+
 
   const Cancel = () => {
     setProductsData({
@@ -593,8 +911,7 @@ function Products(props) {
                 <div className="w-full bg-white ">
                   <select
                     className="w-full  md:py-[14px] py-2 px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040] outline-none rounded-[8px] font-normal md:text-[16px] text-[14px] text-black "
-
-                    value={selectedCategory}
+                    value={productData.category || selectedCategory}
                     onChange={handleCategoryChange}
                     required
                   >
@@ -617,7 +934,7 @@ function Products(props) {
                 <div className="w-full ">
                   <select
                     className="w-full md:py-[14px] py-2 px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040]  outline-none rounded-[8px] font-normal md:text-[16px] text-[14px] text-black"
-                    value={productsData?.subcategory || ""}
+                    value={productData.subcategory || productsData?.subcategory || ""}
                     onChange={handleSubCategoryChange}
                     disabled={!selectedCategory || selectedCategory?.notAvailableSubCategory}
                     required={selectedCategory?.notAvailableSubCategory === false}
@@ -642,9 +959,9 @@ function Products(props) {
                   type="text"
                   className="w-full md:py-[12px] py-2 px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040]  outline-none rounded-[8px] font-normal md:text-[16px] text-[14px] text-black"
                   placeholder="Enter Product Name"
-                  value={productsData.name}
+                  value={productData.name}
                   name="name"
-                  onChange={handleChange}
+                  onChange={(e) => setProductData({...productData, name: e.target.value})}
                   required
                 />
               </div>
@@ -655,8 +972,8 @@ function Products(props) {
                 <div className=" w-full ">
                   <select
                     name="gender"
-                    onChange={handleChange}
-                    value={productsData.gender}
+                    onChange={(e) => setProductData({...productData, gender: e.target.value})}
+                    value={productData.gender}
                     className="w-full md:py-[14px] py-2 px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040]  outline-none rounded-[8px] font-normal md:text-[16px] text-[14px] text-black"
                     placeholder="Select Parameter Type"
                   >
@@ -684,12 +1001,12 @@ function Products(props) {
                   <select
                     name="is_manufacturer_product"
                     onChange={(e) => {
-                      setProductsData({
-                        ...productsData,
+                      setProductData({
+                        ...productData,
                         is_manufacturer_product: e.target.value === 'true'
                       });
                     }}
-                    value={productsData.is_manufacturer_product.toString()}
+                    value={productData.is_manufacturer_product.toString()}
                     className="w-full md:py-[14px] py-2 px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040] outline-none rounded-[8px] font-normal md:text-[16px] text-[14px] text-black"
                     required
                   >
@@ -698,6 +1015,36 @@ function Products(props) {
                   </select>
                 </div>
               </div>
+
+              {/* NEW: Variant Type Selection */}
+              <div className="flex flex-col justify-start items-start">
+                <p className="text-gray-800 text-sm font-semibold NunitoSans pb-2">
+                  Variant Type <span className="text-red-500">*</span>
+                </p>
+                <div className="w-full">
+                  <select
+                    name="productType"
+                    onChange={(e) => {
+                      setProductData({
+                        ...productData,
+                        productType: e.target.value
+                      });
+                    }}
+                    value={productData.productType}
+                    className="w-full md:py-[14px] py-2 px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040] outline-none rounded-[8px] font-normal md:text-[16px] text-[14px] text-black"
+                    required
+                  >
+                    <option value="simple">Simple Product (Single Price & Stock)</option>
+                    <option value="variable">Variable Product (Multiple Variants)</option>
+                  </select>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {productData.productType === 'simple' 
+                    ? '✓ One price, one stock quantity' 
+                    : '✓ Multiple colors, sizes with different prices & stocks'}
+                </p>
+              </div>
+              
               <div className="flex flex-col col-span-2 justify-start items-start">
                 <p className="text-gray-800 text-sm font-semibold NunitoSans pb-2">
                   Short Description
@@ -706,9 +1053,9 @@ function Products(props) {
                   type="text"
                   className="w-full md:py-[12px] py-2 px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040]  outline-none rounded-[8px] font-normal md:text-[16px] text-[14px] text-black"
                   placeholder="Enter Short Description"
-                  value={productsData.short_description}
+                  value={productData.short_description}
                   name="short_description"
-                  onChange={handleChange}
+                  onChange={(e) => setProductData({...productData, short_description: e.target.value})}
                 />
               </div>
 
@@ -723,7 +1070,7 @@ function Products(props) {
                     className="editor max-h-screen overflow-auto"
                     rows={10}
                     config={editorConfig}
-                    value={productsData.long_description}
+                    value={productData.long_description}
                     tabIndex={1}
                     onBlur={handleEditorBlur}
                   />
@@ -731,389 +1078,399 @@ function Products(props) {
               </div>
             </div>
 
+            {/* SIMPLE PRODUCT FORM */}
+            {productData.productType === 'simple' && (
+              <div className="border-2 border-blue-500 rounded-[12px] md:mt-10 mt-5 p-6 bg-blue-50">
+                <h3 className="text-black text-2xl font-bold NunitoSans pb-5 flex items-center gap-2">
+                  <Package className="w-6 h-6 text-blue-600" />
+                  Simple Product Details
+                </h3>
+                
+                <div className="grid md:grid-cols-3 grid-cols-1 gap-5">
+                  <div>
+                    <p className="text-gray-800 text-sm font-semibold mb-2">
+                      Price <span className="text-red-500">*</span>
+                    </p>
+                    <input
+                      type="number"
+                      placeholder="Enter Price"
+                      required
+                      className="w-full md:py-[12px] py-2 px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040] outline-none rounded-[8px] font-normal md:text-[16px] text-[14px] text-black"
+                      value={simpleProduct.price}
+                      onChange={(e) => setSimpleProduct({...simpleProduct, price: e.target.value})}
+                    />
+                  </div>
+
+                  <div>
+                    <p className="text-gray-800 text-sm font-semibold mb-2">
+                      Offer Price <span className="text-red-500">*</span>
+                    </p>
+                    <input
+                      type="number"
+                      placeholder="Enter Offer Price"
+                      required
+                      className="w-full md:py-[12px] py-2 px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040] outline-none rounded-[8px] font-normal md:text-[16px] text-[14px] text-black"
+                      value={simpleProduct.offerPrice}
+                      onChange={(e) => setSimpleProduct({...simpleProduct, offerPrice: e.target.value})}
+                    />
+                  </div>
+
+                  <div>
+                    <p className="text-gray-800 text-sm font-semibold mb-2">
+                      Stock Quantity <span className="text-red-500">*</span>
+                    </p>
+                    <input
+                      type="number"
+                      placeholder="Enter Stock"
+                      required
+                      className="w-full md:py-[12px] py-2 px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040] outline-none rounded-[8px] font-normal md:text-[16px] text-[14px] text-black"
+                      value={simpleProduct.stock}
+                      onChange={(e) => setSimpleProduct({...simpleProduct, stock: e.target.value})}
+                    />
+                  </div>
+
+                  <div className="md:col-span-3">
+                    <p className="text-gray-800 text-sm font-semibold mb-2">
+                      SKU (Optional)
+                    </p>
+                    <input
+                      type="text"
+                      placeholder="Enter SKU"
+                      className="w-full md:py-[12px] py-2 px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040] outline-none rounded-[8px] font-normal md:text-[16px] text-[14px] text-black"
+                      value={simpleProduct.sku}
+                      onChange={(e) => setSimpleProduct({...simpleProduct, sku: e.target.value})}
+                    />
+                  </div>
+
+                  <div className="md:col-span-3">
+                    <p className="text-gray-800 text-sm font-semibold mb-2">
+                      Product Images <span className="text-red-500">*</span>
+                    </p>
+                    <div className="flex gap-3 flex-wrap">
+                      {simpleProduct.images.map((img, idx) => (
+                        <div key={idx} className="relative">
+                          <img src={img} alt="" className="w-24 h-24 object-cover rounded-lg border-2" />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newImages = simpleProduct.images.filter((_, i) => i !== idx);
+                              setSimpleProduct({...simpleProduct, images: newImages});
+                            }}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                      <label className="w-24 h-24 border-2 border-dashed border-gray-400 rounded-lg flex items-center justify-center cursor-pointer hover:border-orange-500 hover:bg-orange-50 transition">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            if (file) {
+                              handleImageUpload(file, (url) => {
+                                setSimpleProduct({
+                                  ...simpleProduct,
+                                  images: [...simpleProduct.images, url]
+                                });
+                              });
+                            }
+                          }}
+                        />
+                        <Upload className="w-6 h-6 text-gray-400" />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* VARIABLE PRODUCT FORM */}
+            {productData.productType === 'variable' && (
             <div className="border border-custom-lightGrays rounded-[8px] md:mt-10 mt-5 px-5 pt-5">
-              <p className="text-black text-2xl font-bold	NunitoSans pb-5">
+              <p className="text-black text-2xl font-bold NunitoSans pb-5">
                 Varients
               </p>
-              {
-                varients.map((item, i) => (
+              {varients.map((item, i) => (
                   <div key={i} className="w-full" id={i}>
-                    <div className="border border-custom-lightGrays  rounded-[8px] p-5 mb-5 relative">
-                      <IoCloseCircleOutline
-                        className="text-red-700 cursor-pointer h-5 w-5 absolute top-[20px] right-[20px]"
-                        onClick={() => {
-                          colorCloseIcon(item, i);
-                        }}
-                      />
-                      <div
-                        className="md:grid md:grid-cols-5 grid-cols-1 w-full md:gap-5"
-                        id={"field-container-" + i}
-                      >
-                        {productsData?.Attribute?.some(attr => attr?.name?.toLowerCase?.() === "color") && (
-                          <div className="">
-                            <p className="text-gray-800 text-sm font-semibold NunitoSans pb-[10px] pl-[40px]">
-                              Color
-                            </p>
-                            <div className="flex justify-start items-center">
-                              <p className="text-gray-800 text-sm font-semibold w-[100px]">
-                                S.no {i + 1}
-                              </p>
-                              <div className="relative w-full">
-                                <input
-                                  type="text"
-                                  className="md:py-[12px] py-2 w-[150px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040]  outline-none rounded-[8px] font-normal md:text-[16px] text-[14px] text-black"
-                                  value={item.color}
-                                  onChange={(e) => {
-                                    setvarients(
-                                      produce((draft) => {
-                                        draft[i].color = e.target.value;
-                                      })
-                                    );
-                                  }}
-
-                                />
-                                <p
-                                  className=" md:w-5 w-3 md:h-5 h-3 rounded-full absolute top-[13px] right-[10px] cursor-pointer border border-black"
-                                  style={{ backgroundColor: item.color }}
-                                  onClick={() => {
-                                    setOpenPopup(true);
-                                    setCurrentIndex(i);
-                                  }}
-                                ></p>
-                                <Dialog
-                                  open={openPopup}
-                                  onClose={handleClose}
-                                  aria-labelledby="draggable-dialog-title"
-                                >
-                                  <div className="md:w-[400px] w-[330px]">
-                                    <DialogTitle
-                                      style={{ cursor: "move" }}
-                                      id="draggable-dialog-title"
-                                    >
-                                      <p className="text-black font-bold text-xl text-center">
-                                        Color Picker
-                                      </p>
-                                    </DialogTitle>
-                                    <DialogContent>
-                                      <ColorPicker
-                                        color={color}
-                                        onChange={setColor}
-                                      />
-                                    </DialogContent>
-                                    <DialogActions className="!p-0 !flex !justify-center !items-center">
-                                      <div className="!flex !justify-center !items-center px-[24px] pb-[24px] w-full gap-3">
-                                        <button
-                                          className="bg-custom-orange h-[45px] w-full rounded-[12px] NunitoSans text-black font-normal text-base cursor-pointer"
-                                          onClick={() => {
-                                            setvarients(
-                                              produce((draft) => {
-                                                draft[i].color = color.hex;
-                                              })
-                                            );
-                                            setvarients(
-                                              produce((draft) => {
-                                                draft[i].selected.forEach((sel) => {
-                                                  sel.attributes?.forEach((attr) => {
-                                                    if (attr.label?.toLowerCase() === "color") {
-                                                      attr.value = color.hex;
-                                                    }
-                                                  });
-                                                });
-                                              })
-                                            );
-                                            setSelectedColor(color.hex)
-                                            setOpenPopup(false);
-                                          }}
-                                        >
-                                          Ok
-                                        </button>
-                                        <button
-                                          className="bg-custom-orange h-[45px] w-full rounded-[12px] NunitoSans text-black font-normal text-base cursor-pointer"
-                                          onClick={handleClose}
-                                        >
-                                          Cancel
-                                        </button>
-                                      </div>
-                                    </DialogActions>
-                                  </div>
-                                </Dialog>
-                              </div>
-                            </div>
-                          </div>
+                    <div className="border border-custom-lightGrays rounded-[8px] p-5 mb-5 relative">
+                      <div className="flex justify-between items-center mb-5">
+                        <p className="text-black text-lg font-bold NunitoSans">
+                          Varient {i + 1}
+                        </p>
+                        {varients.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updatedVarients = varients.filter((_, index) => index !== i);
+                              setvarients(updatedVarients);
+                            }}
+                            className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
                         )}
                       </div>
 
-                      {item.selected?.map((attrGroup, setIndex) => (
-                        <div
-                          key={setIndex}
-                          className=" mt-4 grid grid-cols-1 gap-4 mb-6 border border-gray-300 p-4 rounded"
-                        >
-                          <div className=" relative grid md:grid-cols-4 grid-cols-1 gap-4">
-                            <IoCloseCircleOutline
-                              className="absolute top-0 right-2 text-red-600 text-xl"
-                              onClick={() => {
-                                setvarients(
-                                  produce((draft) => {
-                                    draft[i].selected.splice(setIndex, 1);
-                                  })
-                                );
-                              }}
-                            />
-
-                            {attrGroup?.attributes?.map((attr, attrIndex) => (
-
-                              <div key={attrIndex}>
-                                <p className="text-gray-800 font-semibold mb-1">{attr?.label}</p>
-                                <input
-                                  type="text"
-                                  placeholder="Value"
-                                  className="w-full bg-white text-black border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040]  outline-none rounded-[8px] font-normal md:text-[16px] text-[14px]  px-4 py-2 mb-2"
-                                  value={attr?.value}
-                                  onChange={(e) => {
-                                    setvarients(
-                                      produce((draft) => {
-                                        draft[i].selected[setIndex].attributes[attrIndex].value = e.target.value;
-                                      })
-                                    );
-                                  }}
-                                  disabled={attr?.value?.toLowerCase() === "color"}
-                                />
-                              </div>
-                            ))}
-                          </div>
-
-
-
-                          <div className="grid md:grid-cols-3 grid-cols-1 gap-4 mt-4">
-                            <div>
-                              <p className="text-gray-800 font-semibold mb-1">Qty</p>
-                              <input
-                                type="number"
-                                placeholder="Qty"
-                                required
-                                className="w-full bg-white text-black border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040]  outline-none rounded-[8px] font-normal md:text-[16px] text-[14px] px-4 py-2"
-                                value={attrGroup?.qty || ""}
-                                onChange={(e) => {
-                                  setvarients(
-                                    produce((draft) => {
-                                      draft[i].selected[setIndex].qty = e.target.value;
-                                    })
-                                  );
-                                }}
-                              />
-                            </div>
-
-                            <div>
-                              <p className="text-gray-800 font-semibold mb-1">Price</p>
-                              <input
-                                type="number"
-                                placeholder="Price"
-                                className="w-full bg-white text-black border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040]  outline-none rounded-[8px] font-normal md:text-[16px] text-[14px] px-4 py-2"
-                                value={attrGroup?.price || ""}
-                                onChange={(e) => {
-                                  const value = e.target.value === "" ? "" : Number(e.target.value); // convert to number
-                                  setvarients(
-                                    produce((draft) => {
-                                      draft[i].selected[setIndex].price = value;
-                                    })
-                                  );
-                                }}
-                              />
-
-                            </div>
-
-                            <div>
-                              <p className="text-gray-800 font-semibold mb-1">Offer Price</p>
-                              <input
-                                type="number"
-                                placeholder="Offer Price"
-                                required
-                                className="w-full bg-white text-black border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040]  outline-none rounded-[8px] font-normal md:text-[16px] text-[14px] px-4 py-2"
-                                value={attrGroup?.offerprice || ""}
-                                onChange={(e) => {
-                                  const value = e.target.value === "" ? "" : Number(e.target.value);
-                                  setvarients(
-                                    produce((draft) => {
-                                      draft[i].selected[setIndex].offerprice = value;
-                                    })
-                                  );
-                                }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-
-
-                      {selectedCategory && (
-                        <div className="bg-custom-orange not-first:rounded-[10px] shadow-[2px_4px_6px_0px_#00000040] mx-auto mt-2 flex justify-center items-center cursor-pointer w-[160px]">
-                          <p
-                            className=" py-2 px-4 flex justify-center  items-center gap-2 text-black font-normal text-center text-base"
-                            onClick={() => {
-                              console.log("Add More clicked!");
-                              console.log("productsData.Attribute:", productsData?.Attribute);
-                              console.log("selectedColor:", selectedColor);
-                              
-                              // Parse attributes if they are still strings
-                              let parsedAttributes = productsData?.Attribute || [];
-                              if (parsedAttributes.length > 0 && typeof parsedAttributes[0] === 'string') {
-                                try {
-                                  parsedAttributes = parsedAttributes.map(attr => {
-                                    let parsed = attr;
-                                    // Parse multiple times if needed
-                                    while (typeof parsed === 'string') {
-                                      parsed = JSON.parse(parsed);
-                                    }
-                                    return Array.isArray(parsed) ? parsed : [parsed];
-                                  }).flat();
-                                  console.log("Parsed attributes:", parsedAttributes);
-                                } catch (e) {
-                                  console.error('Error parsing attributes:', e);
-                                  parsedAttributes = [];
-                                }
-                              }
-                              
-                              const newAttrGroup = {
-                                attributes: parsedAttributes?.map(attr => ({
-                                  label: attr?.name || "",
-                                  value: attr?.name?.toLowerCase() === "color" ? selectedColor || "" : "",
-                                })) || [],
-                                qty: "",
-                                price: "",
-                                offerprice: "",
-                              };
-
-                              console.log("newAttrGroup:", newAttrGroup);
-
-                              setvarients(
-                                produce((draft) => {
-                                  draft[i].selected.push(newAttrGroup);
-                                })
-                              );
-                            }}
-
-                          >
-                            Add More <CirclePlus />
+                      <div className="grid md:grid-cols-2 grid-cols-1 gap-5 mb-5">
+                        <div>
+                          <p className="text-gray-800 text-sm font-semibold mb-2">
+                            Color <span className="text-red-500">*</span>
                           </p>
-                        </div>
-                      )}
-
-
-
-
-                      <div className="w-full mt-5">
-                        <div className="relative w-full">
-                          <div className="w-full">
-                            <p className="text-gray-800 text-lg font-semibold pb-1">
-                              Images
-                            </p>
-                            <div className="border-[2px] border-[#B0B0B0] rounded-[8px] shadow-[2px_4px_6px_0px_#00000040]   p-2.5 w-full bg-custom-light flex justify-start items-center">
-                              <input
-                                className="bg-white text-black  outline-none  font-normal md:text-[16px] text-[14px] md:w-[90%] w-[85%]"
-                                type="text"
-                                placeholder="Carousel Images"
-                                value={singleImgs[i] || ""}
-                                onChange={(e) => {
-                                  const updated = [...singleImgs];
-                                  updated[i] = e.target.value;
-                                  setSingleImgs(updated);
-                                }}
-                              />
-                            </div>
-                          </div>
-
-                          <div className="absolute top-[36px] md:right-[10px]  right-[10px]">
-                            <MdOutlineFileUpload
-                              className="text-black h-8 w-8"
-                              onClick={() => {
-                                fileRefs.current[i]?.click();
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="color"
+                              value={item.color || "#000000"}
+                              onChange={(e) => {
+                                const updatedVarients = [...varients];
+                                updatedVarients[i].color = e.target.value;
+                                setvarients(updatedVarients);
                               }}
+                              className="w-12 h-12 rounded-lg border-2 border-gray-300 cursor-pointer"
                             />
                             <input
-                              type="file"
-                              ref={(el) => (fileRefs.current[i] = el)}
-                              className="hidden"
-                              onChange={(e) => handleImageChange(e, i)}
+                              type="text"
+                              placeholder="Color Name or Hex Code"
+                              value={item.color}
+                              onChange={(e) => {
+                                const updatedVarients = [...varients];
+                                updatedVarients[i].color = e.target.value;
+                                setvarients(updatedVarients);
+                              }}
+                              className="flex-1 py-2 px-3 bg-white text-black border-2 border-gray-300 rounded-lg outline-none focus:border-orange-500 placeholder-gray-400"
                             />
                           </div>
                         </div>
 
-                        <div className="flex md:flex-row flex-col justify-between items-center mt-5">
-                          <p className="text-gray-700 text-[12px] md:text-[14px]"> Please Upload image in 1471 * 981 size for better UI experience </p>
-                          <p
-                            className="text-black bg-custom-orange shadow-[2px_4px_6px_0px_#00000040] rounded-[10px] text-center text-md py-2 w-24 cursor-pointer"
-                            onClick={() => {
-                              if (!singleImgs[i]) {
-                                toast.error("Carousel Images is required")
-                                return;
-                              }
-
-                              setvarients(
-                                produce((draft) => {
-                                  draft[i].image.push(singleImgs[i]);
-                                })
-                              );
-
-                              const updated = [...singleImgs];
-                              updated[i] = "";
-                              setSingleImgs(updated);
-                            }}
-                          >
-                            Add
+                        <div>
+                          <p className="text-gray-800 text-sm font-semibold mb-2">
+                            Images
                           </p>
-                        </div>
-                        <div className="flex md:flex-row flex-wrap md:gap-5 gap-4 mt-5">
-                          {item?.image?.map((ig, inx) => (
-                            <div className="relative" key={inx}>
-                              <img
-                                className="md:w-20 w-[85px] h-20 object-contain"
-                                src={ig}
-                              />
-                              <IoCloseCircleOutline
-                                className="text-red-700 cursor-pointer h-5 w-5 absolute left-[5px] top-[10px]"
-                                onClick={() => {
-                                  closeIcon(ig, inx, item?.image, i);
+                          <div className="flex gap-2 flex-wrap">
+                            {item.image.map((img, imgIdx) => (
+                              <div key={imgIdx} className="relative">
+                                <img
+                                  src={img}
+                                  alt=""
+                                  className="w-16 h-16 object-cover rounded-lg border-2"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const updatedVarients = [...varients];
+                                    updatedVarients[i].image = updatedVarients[i].image.filter((_, idx) => idx !== imgIdx);
+                                    setvarients(updatedVarients);
+                                  }}
+                                  className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ))}
+                            <label className="w-16 h-16 border-2 border-dashed border-gray-400 rounded-lg flex items-center justify-center cursor-pointer hover:border-orange-500">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files[0];
+                                  if (file) {
+                                    handleImageUpload(file, (url) => {
+                                      const updatedVarients = [...varients];
+                                      updatedVarients[i].image.push(url);
+                                      setvarients(updatedVarients);
+                                    });
+                                  }
                                 }}
                               />
-                            </div>
-                          ))}
+                              <Upload className="w-4 h-4 text-gray-400" />
+                            </label>
+                          </div>
                         </div>
                       </div>
 
+                      {/* Attributes Section */}
+                      <div className="mb-5">
+                        <div className="flex justify-between items-center mb-3">
+                          <p className="text-gray-800 text-sm font-semibold">
+                            Attributes (Size, etc.)
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updatedVarients = [...varients];
+                              updatedVarients[i].selected.push({
+                                attributes: [],
+                                price: "",
+                                offerprice: "",
+                                qty: "",
+                              });
+                              setvarients(updatedVarients);
+                            }}
+                            className="flex items-center gap-2 px-3 py-1 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition"
+                          >
+                            <Plus className="w-4 h-4" />
+                            Add Attribute
+                          </button>
+                        </div>
+
+                        {item.selected.map((selected, selectedIdx) => (
+                          <div
+                            key={selectedIdx}
+                            className="border border-gray-200 rounded-lg p-4 mb-3 bg-gray-50"
+                          >
+                            <div className="flex justify-between text-gray-600 items-center mb-3">
+                              <p className="font-semibold text-sm">
+                                Attribute Set {selectedIdx + 1}
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updatedVarients = [...varients];
+                                  updatedVarients[i].selected = updatedVarients[i].selected.filter((_, idx) => idx !== selectedIdx);
+                                  setvarients(updatedVarients);
+                                }}
+                                className="text-red-500 hover:text-red-700"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+
+                            {/* Dynamic Attributes */}
+                            <div className="grid md:grid-cols-2 grid-cols-1 gap-3 mb-3">
+                              {selected.attributes.map((attr, attrIdx) => (
+                                <div key={attrIdx} className="flex gap-2">
+                                  <input
+                                    type="text"
+                                    placeholder="Attribute Name (e.g., Size)"
+                                    value={attr.label || ""}
+                                    onChange={(e) => {
+                                      const updatedVarients = [...varients];
+                                      updatedVarients[i].selected[selectedIdx].attributes[attrIdx].label = e.target.value;
+                                      setvarients(updatedVarients);
+                                    }}
+                                    className="flex-1 py-2 px-3 bg-white text-black border border-gray-300 rounded-lg outline-none focus:border-orange-500 placeholder-gray-400"
+                                  />
+                                  <input
+                                    type="text"
+                                    placeholder="Value (e.g., M, L, XL)"
+                                    value={attr.value || ""}
+                                    onChange={(e) => {
+                                      const updatedVarients = [...varients];
+                                      updatedVarients[i].selected[selectedIdx].attributes[attrIdx].value = e.target.value;
+                                      setvarients(updatedVarients);
+                                    }}
+                                    className="flex-1 py-2 px-3 bg-white text-black border border-gray-300 rounded-lg outline-none focus:border-orange-500 placeholder-gray-400"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const updatedVarients = [...varients];
+                                      updatedVarients[i].selected[selectedIdx].attributes = updatedVarients[i].selected[selectedIdx].attributes.filter((_, idx) => idx !== attrIdx);
+                                      setvarients(updatedVarients);
+                                    }}
+                                    className="text-red-500 hover:text-red-700 p-2"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              ))}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updatedVarients = [...varients];
+                                  updatedVarients[i].selected[selectedIdx].attributes.push({ label: "", value: "" });
+                                  setvarients(updatedVarients);
+                                }}
+                                className="flex items-center text-gray-700 justify-center gap-2 py-2 px-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition"
+                              >
+                                <Plus className="w-4 h-4" />
+                                Add Attribute
+                              </button>
+                            </div>
+
+                            {/* Price & Stock */}
+                            <div className="grid md:grid-cols-3 grid-cols-1 gap-3">
+                              <div>
+                                <p className="text-xs font-semibold mb-1 text-gray-800">
+                                  Price <span className="text-red-500">*</span>
+                                </p>
+                                <input
+                                  type="number"
+                                  placeholder="Enter Price"
+                                  value={selected.price}
+                                  onChange={(e) => {
+                                    const updatedVarients = [...varients];
+                                    updatedVarients[i].selected[selectedIdx].price = e.target.value;
+                                    setvarients(updatedVarients);
+                                  }}
+                                  className="w-full py-2 px-3 bg-white text-black border border-gray-300 rounded-lg outline-none focus:border-orange-500 placeholder-gray-400"
+                                />
+                              </div>
+                              <div>
+                                <p className="text-xs font-semibold mb-1 text-gray-800">
+                                  Offer Price <span className="text-red-500">*</span>
+                                </p>
+                                <input
+                                  type="number"
+                                  placeholder="Enter Offer Price"
+                                  value={selected.offerprice}
+                                  onChange={(e) => {
+                                    const updatedVarients = [...varients];
+                                    updatedVarients[i].selected[selectedIdx].offerprice = e.target.value;
+                                    setvarients(updatedVarients);
+                                  }}
+                                  className="w-full py-2 px-3 bg-white text-black border border-gray-300 rounded-lg outline-none focus:border-orange-500 placeholder-gray-400"
+                                />
+                              </div>
+                              <div>
+                                <p className="text-xs font-semibold mb-1 text-gray-800">
+                                  Stock <span className="text-red-500">*</span>
+                                </p>
+                                <input
+                                  type="number"
+                                  placeholder="Enter Stock Quantity"
+                                  value={selected.qty}
+                                  onChange={(e) => {
+                                    const updatedVarients = [...varients];
+                                    updatedVarients[i].selected[selectedIdx].qty = e.target.value;
+                                    setvarients(updatedVarients);
+                                  }}
+                                  className="w-full py-2 px-3 bg-white text-black border border-gray-300 rounded-lg outline-none focus:border-orange-500 placeholder-gray-400"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 ))
               }
 
-              <div className="w-full md:mt-5 mt-5 flex justify-end mb-5 gap-2">
+              <div className="flex justify-center items-center pb-5">
                 <p
-                  className="bg-custom-orange flex justify-center items-center gap-2 cursor-pointer md:h-[45px] h-[40px] md:w-[217px] w-full rounded-[12px] NunitoSans text-black shadow-[2px_4px_6px_0px_#00000040] font-normal text-base"
+                  className="text-black text-lg font-bold NunitoSans cursor-pointer flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-400 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition"
                   onClick={() => {
-                    const newVariant = {
-                      color: "",
-                      image: [],
-                      selected: [
-                        {
-                          attributes: productsData?.Attribute?.map(attr => ({
-                            label: attr.name,
-                            value: "",
-                          })),
-                          qty: "",
-                          price: "",
-                          offerprice: ""
-                        }
-                      ]
-                    };
-                    setvarients(prev => [...prev, newVariant]);
-                    setSingleImgs(prev => [...prev, ""]);
+                    setvarients([
+                      ...varients,
+                      {
+                        color: "",
+                        image: [],
+                        selected: [],
+                      },
+                    ]);
                   }}
                 >
                   Add More Varients <CirclePlus />
                 </p>
               </div>
 
-
             </div>
+            )}
+            {/* END VARIABLE PRODUCT FORM */}
 
             <div className="flex justify-center items-center md:mt-10 mt-5 gap-5">
               <button

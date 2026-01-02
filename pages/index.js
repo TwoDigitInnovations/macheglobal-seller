@@ -69,7 +69,7 @@ function Home(props) {
   const fetchDashboardStats = async () => {
     try {
       props.loader(true);
-      const res = await Api("get", "product/dashboard-stats", "", router);
+      const res = await Api("get", "product/seller-dashboard-stats", "", router);
       if (res?.status) {
         setDashboardStats({
           totalSales: res.data.totalSales || 0,
@@ -94,7 +94,7 @@ function Home(props) {
   useEffect(() => {
     const getMonthlySales = async () => {
       props.loader(true);
-      Api("get", `getMonthlySales?year=${selectedYear}`, "", router).then(
+      Api("get", `product/getMonthlySales?year=${selectedYear}`, "", router).then(
         (res) => {
           console.log("res================>", res);
           props.loader(false);
@@ -123,46 +123,46 @@ function Home(props) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <ModernStatsCard
-            title="Total Sales"
+            title="My Total Sales"
             value={`HTG ${dashboardStats.totalSales.toLocaleString()}`}
             icon={<ChartLine size={45} />}
             accentColor="#44DD22E3"
-            message="+12% from last month"
+            message="Total revenue from your products"
           />
           <ModernStatsCard
             title="Pending Orders"
             value={dashboardStats.pendingOrders}
             icon={<ArchiveRestore size={45} />}
             accentColor="#44DD22E3"
-            message={`${Math.min(5, dashboardStats.pendingOrders)} need shipping today`}
+            message={`${dashboardStats.pendingOrders} orders need your attention`}
           />
           <ModernStatsCard
-            title="Products in Stock"
+            title="My Products in Stock"
             value={dashboardStats.productsInStock.toLocaleString()}
             icon={<Warehouse size={45} />}
             accentColor="#E84F4F"
-            message={`${Math.min(5, Math.floor(dashboardStats.productsInStock * 0.1))} low-stock alerts`}
+            message={`Total inventory in your store`}
           />
           <ModernStatsCard
-            title="Earnings"
+            title="My Earnings"
             value={`HTG ${dashboardStats.earnings.toLocaleString()}`}
             icon={<BanknoteArrowDown size={45} />}
             accentColor="#44DD22E3"
-            message={`Next payout: ${new Date(new Date().setDate(new Date().getDate() + 5)).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}`}
+            message={`Available balance in your wallet`}
           />
           <ModernStatsCard
             title="Refund Requests"
             value={dashboardStats.refundRequests}
             icon={<HandCoins size={45} />}
             accentColor="#E84F4F"
-            message={`${Math.min(2, dashboardStats.refundRequests)} pending review`}
+            message={`${dashboardStats.refundRequests} refund requests`}
           />
           <ModernStatsCard
-            title="Payouts Completed"
+            title="Total Withdrawals"
             value={`HTG ${dashboardStats.payoutsCompleted.toLocaleString()}`}
             icon={<BanknoteArrowDown size={45} />}
             accentColor="#0099FFCC"
-            message={`Last payout: ${new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}`}
+            message={`Total amount withdrawn`}
           />
 
         </div>

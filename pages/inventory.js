@@ -66,20 +66,38 @@ function Inventory(props) {
 
 
   const image = ({ value, row }) => {
+    // Get image from multiple possible sources
+    let imageUrl = null;
+    
+    // 1. Check simple product images
+    if (row.original?.simpleProduct?.images?.length > 0) {
+      imageUrl = row.original.simpleProduct.images[0];
+    } 
+    // 2. Check varients array (even for simple products - old data)
+    else if (row.original?.varients?.length > 0 && row.original.varients[0]?.image?.length > 0) {
+      imageUrl = row.original.varients[0].image[0];
+    }
+    // 3. Check variants array (new format)
+    else if (row.original?.variants?.length > 0 && row.original.variants[0]?.images?.length > 0) {
+      imageUrl = row.original.variants[0].images[0];
+    }
+    
     return (
       <div className="flex flex-col items-center justify-center">
-        {row.original &&
-          row.original.varients &&
-          row.original.varients.length > 0 && (
-            <img
-              className="md:h-[116px] md:w-[126px] h-20 w-40 object-contain  rounded-md"
-              src={row.original.varients[0].image[0]}
-              alt="Product"
-              onError={(e) => {
-                e.target.src = "/placeholder-image.png"; // Add fallback image
-              }}
-            />
-          )}
+        {imageUrl ? (
+          <img
+            className="md:h-[116px] md:w-[126px] h-20 w-40 object-contain rounded-md"
+            src={imageUrl}
+            alt="Product"
+            onError={(e) => {
+              e.target.src = "/placeholder-image.png";
+            }}
+          />
+        ) : (
+          <div className="md:h-[116px] md:w-[126px] h-20 w-40 flex items-center justify-center bg-gray-100 rounded-md">
+            <span className="text-gray-400 text-xs">No Image</span>
+          </div>
+        )}
       </div>
     );
   };
@@ -103,10 +121,29 @@ function Inventory(props) {
   };
 
   const price = ({ row }) => {
-    const value = row.original?.varients?.[0]?.selected?.[0]?.offerprice;
+    // Get price from either simple product or variable product
+    let priceValue = 0;
+    
+    // Check simple product first
+    if (row.original?.simpleProduct?.offerPrice !== undefined) {
+      priceValue = row.original.simpleProduct.offerPrice;
+    } 
+    // Check simple product price field
+    else if (row.original?.simpleProduct?.price !== undefined) {
+      priceValue = row.original.simpleProduct.price;
+    }
+    // Check variable product
+    else if (row.original?.varients?.[0]?.selected?.[0]?.offerprice !== undefined) {
+      priceValue = row.original.varients[0].selected[0].offerprice;
+    }
+    // Fallback to old format
+    else if (row.original?.varients?.[0]?.selected?.[0]?.price !== undefined) {
+      priceValue = row.original.varients[0].selected[0].price;
+    }
+    
     const formattedPrice =
-      !isNaN(value) && value !== null && value !== undefined
-        ? parseFloat(value).toFixed(2)
+      !isNaN(priceValue) && priceValue !== null && priceValue !== undefined
+        ? parseFloat(priceValue).toFixed(2)
         : "0.00";
 
     return (
@@ -124,25 +161,27 @@ function Inventory(props) {
     );
   };
 
-  const availableColor = ({ value }) => {
-    if (!value || !Array.isArray(value)) {
+  const availableColor = ({ value, row }) => {
+    // Check if this is a variable product with colors
+    if (value && Array.isArray(value) && value.length > 0) {
       return (
-        <div className="p-4 flex items-center justify-center">
-          <p className="text-gray-500 text-sm">No colors</p>
+        <div className="p-4 flex items-center justify-center gap-2 max-w-80 flex-wrap">
+          {value.map((item, i) => (
+            <div
+              key={i}
+              className="text-base font-normal rounded-full h-5 w-5 border border-black"
+              style={{ background: item?.color || "#ccc" }}
+              title={item?.colorName || "Color"}
+            ></div>
+          ))}
         </div>
       );
     }
-
+    
+    // For products without color variants (simple products or no colors)
     return (
-      <div className="p-4 flex items-center justify-center gap-2 max-w-80 flex-wrap">
-        {value.map((item, i) => (
-          <div
-            key={i}
-            className="text-base font-normal rounded-full h-5 w-5 border border-black"
-            style={{ background: item?.color || "#ccc" }}
-            title={item?.colorName || "Color"}
-          ></div>
-        ))}
+      <div className="p-4 flex items-center justify-center">
+        <p className="text-gray-500 text-sm">N/A</p>
       </div>
     );
   };
@@ -167,15 +206,45 @@ function Inventory(props) {
   const renderProductModal = () => {
     if (!viewProduct) return null;
 
-    const variant = viewProduct.varients?.[0] || {};
-    const selectedVariant = variant.selected?.[0] || {};
-    const images = variant.image || [];
+    // Detect product type - check multiple sources
+    const hasSimpleProductData = viewProduct.simpleProduct?.images?.length > 0 || 
+                                 viewProduct.simpleProduct?.stock > 0;
+    const hasVarientData = viewProduct.varients?.length > 0;
+    
+    const isSimpleProduct = viewProduct.productType === 'simple' && !hasVarientData;
+    
+    // Get images, price, and stock from multiple possible sources
+    let images = [];
+    let price = 0;
+    let stock = 0;
+    
+    if (hasSimpleProductData && !hasVarientData) {
+      // Pure simple product
+      images = viewProduct.simpleProduct?.images || [];
+      price = viewProduct.simpleProduct?.offerPrice || viewProduct.simpleProduct?.price || 0;
+      stock = viewProduct.simpleProduct?.stock || 0;
+    } else if (hasVarientData) {
+      // Has variants (could be old simple product with varients or actual variable product)
+      const variant = viewProduct.varients?.[0] || {};
+      const selectedVariant = variant.selected?.[0] || {};
+      images = variant.image || [];
+      price = selectedVariant.offerprice || selectedVariant.price || 0;
+      stock = viewProduct.pieces || 0;
+    } else {
+      // Fallback - try to get any available data
+      images = viewProduct.simpleProduct?.images || 
+               (viewProduct.varients?.[0]?.image) || [];
+      price = viewProduct.simpleProduct?.offerPrice || 
+              viewProduct.simpleProduct?.price ||
+              viewProduct.varients?.[0]?.selected?.[0]?.offerprice || 0;
+      stock = viewProduct.simpleProduct?.stock || viewProduct.pieces || 0;
+    }
 
     return (
       <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div className="bg-white rounded-lg w-full max-w-5xl max-h-[90vh] overflow-y-auto">
           {/* Header */}
-          <div className="flex justify-between items-center p-4 border-b">
+          <div className="flex justify-between items-center p-4 border-b sticky top-0 bg-white z-10">
             <h2 className="text-xl text-gray-800  font-semibold">Product Details</h2>
             <button 
               onClick={() => setShowProductModal(false)}
@@ -219,27 +288,26 @@ function Inventory(props) {
               {/* Product Info */}
               <div>
                 <h1 className="text-2xl text-gray-800  font-bold mb-2">{viewProduct.name}</h1>
-                <div className="flex items-center mb-4">
+                <div className="flex items-center mb-2">
                   <span className="text-gray-500">Category: </span>
                   <span className="ml-2 text-gray-800">{viewProduct.categoryName || 'N/A'}</span>
+                </div>
+                <div className="flex items-center mb-4">
+                  <span className="text-gray-500">Type: </span>
+                  <span className="ml-2 text-gray-800">{isSimpleProduct ? 'Simple Product' : 'Variable Product'}</span>
                 </div>
                 
                 <div className="bg-gray-50 p-4 rounded-lg mb-4">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-2xl font-bold text-gray-900">
-                      ${selectedVariant.offerprice || '0.00'}
+                      ${parseFloat(price).toFixed(2)}
                     </span>
-                    {selectedVariant.mrp > selectedVariant.offerprice && (
-                      <span className="text-gray-500 line-through">
-                        ${selectedVariant.mrp}
-                      </span>
-                    )}
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4 mt-4">
                     <div>
                       <p className="text-sm text-gray-700">Available Stock</p>
-                      <p className="font-medium text-gray-800">{viewProduct.pieces || 0} units</p>
+                      <p className="font-medium text-gray-800">{stock} units</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-700">Sold</p>
@@ -250,50 +318,139 @@ function Inventory(props) {
                 
                 <div className="mb-4">
                   <h3 className="font-semibold text-gray-800 mb-2">Description</h3>
-                  <p className="text-gray-700">
+                  <p className="text-gray-700 text-sm line-clamp-3">
                     {viewProduct.short_description || 'No description available'}
                   </p>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-gray-700">Created</p>
-                    <p className="text-gray-800">{formatDate(viewProduct.createdAt)}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-700">Last Updated</p>
-                    <p className="text-gray-800">{formatDate(viewProduct.updatedAt)}</p>
-                  </div>
                 </div>
               </div>
             </div>
             
+            {/* All Variants Section - Only for variable products */}
+            {!isSimpleProduct && viewProduct.varients && viewProduct.varients.length > 0 && (
+              <div className="mt-6 pt-6 border-t">
+                <h3 className="text-lg text-gray-800 font-semibold mb-4">
+                  All Variants ({viewProduct.varients.length})
+                </h3>
+                <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+                  {viewProduct.varients.map((variant, variantIdx) => (
+                    <div key={variantIdx} className="border rounded-lg p-4 bg-gray-50">
+                      <div className="flex gap-4">
+                        {/* Variant Images */}
+                        <div className="flex-shrink-0">
+                          {variant.image && variant.image.length > 0 ? (
+                            <div>
+                              <img 
+                                src={variant.image[0]} 
+                                alt={`Variant ${variantIdx + 1}`}
+                                className="w-24 h-24 object-cover rounded border"
+                              />
+                              {variant.image.length > 1 && (
+                                <p className="text-xs text-gray-500 mt-1 text-center">
+                                  +{variant.image.length - 1} more
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="w-24 h-24 bg-gray-200 rounded flex items-center justify-center">
+                              <span className="text-xs text-gray-400">No Image</span>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Variant Details */}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-3">
+                            <h4 className="font-semibold text-gray-800">Variant {variantIdx + 1}</h4>
+                            {variant.color && (
+                              <div className="flex items-center gap-1">
+                                <div 
+                                  className="w-5 h-5 rounded-full border border-gray-300"
+                                  style={{ backgroundColor: variant.color }}
+                                  title={variant.color}
+                                />
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Variant Options/Sizes */}
+                          {variant.selected && variant.selected.length > 0 && (
+                            <div className="space-y-2">
+                              {variant.selected.map((option, optIdx) => (
+                                <div key={optIdx} className="bg-white p-3 rounded border">
+                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                                    {/* Attributes (Size, etc) */}
+                                    {option.attributes && option.attributes.length > 0 && (
+                                      <div>
+                                        <p className="text-gray-600 text-xs font-medium">Attributes</p>
+                                        {option.attributes.map((attr, attrIdx) => (
+                                          <p key={attrIdx} className="text-gray-800">
+                                            {attr.label || attr.name}: <span className="font-medium">{attr.value}</span>
+                                          </p>
+                                        ))}
+                                      </div>
+                                    )}
+                                    
+                                    {/* Price */}
+                                    <div>
+                                      <p className="text-gray-600 text-xs font-medium">Price</p>
+                                      <p className="text-gray-800 font-semibold">${option.offerprice || option.price || 0}</p>
+                                      {option.price && option.offerprice && option.price !== option.offerprice && (
+                                        <p className="text-gray-500 text-xs line-through">${option.price}</p>
+                                      )}
+                                    </div>
+                                    
+                                    {/* Stock */}
+                                    <div>
+                                      <p className="text-gray-600 text-xs font-medium">Stock</p>
+                                      <p className="text-gray-800 font-semibold">{option.qty || 0} units</p>
+                                    </div>
+                                    
+                                    {/* SKU */}
+                                    {option.sku && (
+                                      <div>
+                                        <p className="text-gray-600 text-xs font-medium">SKU</p>
+                                        <p className="text-gray-800 font-mono text-xs">{option.sku}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
             {/* Additional Details */}
-            <div className="mt-8 pt-6 border-t">
-              <h3 className="text-lg text-gray-800 font-semibold mb-4">Product Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="mt-6 pt-6 border-t">
+              <h3 className="text-lg text-gray-800 font-semibold mb-4">Additional Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-gray-700">Product ID</p>
-                  <p className="font-mono text-gray-800">{viewProduct._id}</p>
+                  <p className="text-gray-600">Product ID</p>
+                  <p className="font-mono text-gray-800 text-xs">{viewProduct._id}</p>
                 </div>
                 <div>
-                  <p className="text-gray-700">Category</p>
-                  <p className="text-gray-800">{viewProduct.categoryName || 'N/A'}</p>
+                  <p className="text-gray-600">Subcategory</p>
+                  <p className="text-gray-800">{viewProduct.subCategoryName || 'N/A'}</p>
                 </div>
                 <div>
-                  <p className="text-gray-700">Subcategory</p>
-                  <p className="text-gray-800" >{viewProduct.subCategoryName || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-gray-700">Gender</p>
+                  <p className="text-gray-600">Gender</p>
                   <p className="text-gray-800">{viewProduct.gender || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-600">Created</p>
+                  <p className="text-gray-800">{formatDate(viewProduct.createdAt)}</p>
                 </div>
               </div>
             </div>
           </div>
           
           {/* Footer */}
-          <div className="p-4 border-t flex justify-end space-x-3">
+          <div className="p-4 border-t flex justify-end space-x-3 sticky bottom-0 bg-white">
             <button
               onClick={() => setShowProductModal(false)}
               className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
@@ -383,7 +540,22 @@ function Inventory(props) {
 
   const deleteProduct = async (_id) => {
     try {
-      // First check if product is in flash sale
+      // First show confirmation dialog
+      const result = await Swal.fire({
+        text: "Are you sure you want to delete this product?",
+        showCancelButton: true,
+        cancelButtonColor: "#6c757d",
+        confirmButtonText: "Delete",
+        confirmButtonColor: "#d33",
+        width: "380px",
+      });
+
+      // If user cancelled, return early
+      if (!result.isConfirmed) {
+        return;
+      }
+
+      // User confirmed, now proceed with deletion
       props.loader(true);
       const checkRes = await Api("delete", `product/deleteProduct/${_id}`, {}, router);
       props.loader(false);
@@ -414,8 +586,11 @@ function Inventory(props) {
               (res) => {
                 props.loader(false);
                 if (res?.status) {
-                  getProduct(currentPage);
+                  // Update UI immediately by filtering out the deleted product
+                  setProductsList(prevList => prevList.filter(product => product._id !== _id));
                   toast.success(res?.data?.message || "Product and flash sale deleted successfully");
+                  // Refresh the list to get updated data
+                  setTimeout(() => getProduct(currentPage), 500);
                 } else {
                   toast.error(res?.data?.message || "Failed to delete product");
                 }
@@ -428,20 +603,12 @@ function Inventory(props) {
           }
         });
       } else if (checkRes?.status) {
-        // Product not in flash sale, show normal confirmation
-        Swal.fire({
-          text: "Are you sure you want to delete this product?",
-          showCancelButton: true,
-          cancelButtonColor: "#6c757d",
-          confirmButtonText: "Delete",
-          confirmButtonColor: "#d33",
-          width: "380px",
-        }).then(function (result) {
-          if (result.isConfirmed) {
-            getProduct(currentPage);
-            toast.success(checkRes?.data?.message || "Product deleted successfully");
-          }
-        });
+        // Product deleted successfully (not in flash sale)
+        // Update UI immediately by filtering out the deleted product
+        setProductsList(prevList => prevList.filter(product => product._id !== _id));
+        toast.success(checkRes?.data?.message || "Product deleted successfully");
+        // Refresh the list to get updated data
+        setTimeout(() => getProduct(currentPage), 500);
       } else {
         toast.error(checkRes?.data?.message || "Failed to delete product");
       }
