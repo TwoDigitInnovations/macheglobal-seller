@@ -278,17 +278,39 @@ function SaleProduct(props) {
 
                     <div className="p-4 flex justify-center">
                       <div className="relative">
-                        {sale?.variant?.image[0] ? (
-                          <img
-                            src={sale?.variant?.image[0]}
-                            alt={sale.product?.name || "Product"}
-                            className="w-32 h-full object-cover rounded-lg shadow-md"
-                          />
-                        ) : (
-                          <div className="w-32 h-32 bg-gray-200 rounded-lg flex items-center justify-center">
-                            <ShoppingBag className="h-16 w-16 text-gray-400" />
-                          </div>
-                        )}
+                        {(() => {
+                          // Get image from multiple sources
+                          let imageUrl = null;
+                          
+                          // 1. Check variant image
+                          if (sale?.variant?.image?.[0]) {
+                            imageUrl = sale.variant.image[0];
+                          }
+                          // 2. Check simple product images
+                          else if (sale?.product?.simpleProduct?.images?.[0]) {
+                            imageUrl = sale.product.simpleProduct.images[0];
+                          }
+                          // 3. Check product varients (fallback)
+                          else if (sale?.product?.varients?.[0]?.image?.[0]) {
+                            imageUrl = sale.product.varients[0].image[0];
+                          }
+                          
+                          return imageUrl ? (
+                            <img
+                              src={imageUrl}
+                              alt={sale.product?.name || "Product"}
+                              className="w-32 h-full object-cover rounded-lg shadow-md"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                              }}
+                            />
+                          ) : (
+                            <div className="w-32 h-32 bg-gray-200 rounded-lg flex items-center justify-center">
+                              <ShoppingBag className="h-16 w-16 text-gray-400" />
+                            </div>
+                          );
+                        })()}
 
                         <div className="absolute -bottom-2 -right-2 bg-custom-orange text-black px-3 py-1 rounded-full text-sm font-bold shadow-lg">
                           ${sale.price}

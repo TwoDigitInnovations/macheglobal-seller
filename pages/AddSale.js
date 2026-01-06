@@ -203,11 +203,26 @@ function AddSale(props) {
         labelParts.push(`Variant ${idx + 1}`);
       }
 
+      // Get image from multiple possible sources
+      let variantImage = null;
+      if (variant.image && Array.isArray(variant.image) && variant.image.length > 0) {
+        variantImage = variant.image[0];
+      } else if (variant.images && Array.isArray(variant.images) && variant.images.length > 0) {
+        variantImage = variant.images[0];
+      } else if (typeof variant.image === 'string') {
+        variantImage = variant.image;
+      }
+
+      // If no variant image, try to get from product's simple product or first available image
+      if (!variantImage && productDetails.simpleProduct?.images?.length > 0) {
+        variantImage = productDetails.simpleProduct.images[0];
+      }
+
       return {
         value: idx,
         label: labelParts.join(' | '),
         variant: variant,
-        image: variant.image?.[0] || null, // Support different image field structures
+        image: variantImage,
       };
     });
   };

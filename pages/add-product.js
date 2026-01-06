@@ -115,15 +115,10 @@ function Products(props) {
   const forms = useRef(null);
 
   useEffect(() => {
-    getCategory();
-
-  }, []);
-
-  useEffect(() => {
-    if (router.isReady && router.query.id) {
-      getProductById(router.query.id);
+    if (router.isReady) {
+      getCategory();
     }
-  }, [router.isReady, router.query.id]);
+  }, [router.isReady]);
 
   useEffect(() => {
     if (productsData?.Attribute) {
@@ -185,9 +180,18 @@ function Products(props) {
     Api("get", "category/getCategories", "", router).then(
       (res) => {
         props.loader(false);
-        console.log("res================>", res);
+        console.log("✅ Categories loaded:", res?.data?.length);
         if (res?.data) {
           setCategoryData(res?.data);
+          
+          // If we're in edit mode, load the product after categories are loaded
+          if (router.query.id) {
+            console.log("📝 Edit mode detected, loading product:", router.query.id);
+            // Pass the fresh categories data directly to avoid timing issues
+            setTimeout(() => {
+              getProductById(router.query.id, res.data);
+            }, 100);
+          }
         }
       },
       (err) => {
@@ -198,11 +202,14 @@ function Products(props) {
     );
   };
 
-  const getProductById = async (id) => {
+  const getProductById = async (id, categories = categoryData) => {
     if (!id) {
       console.error("Invalid product ID");
       return;
     }
+    
+    console.log("getProductById called with categories:", categories.length);
+    
     props.loader(true);
     Api("get", `product/getProductById/${id}`, "", router).then(
       (res) => {
@@ -212,17 +219,24 @@ function Products(props) {
           
           console.log("=== PRODUCT LOADED FROM BACKEND ===");
           console.log("Full product data:", product);
-          console.log("product.varients:", product.varients);
-          console.log("product.variants:", product.variants);
-          console.log("product.simpleProduct:", product.simpleProduct);
-          console.log("product.productType:", product.productType);
+          console.log("Product category:", product.category);
+          console.log("Product subcategory:", product.subcategory);
+          
+          // Extract IDs from category and subcategory (they might be objects or strings)
+          const categoryId = typeof product.category === 'object' ? product.category._id : product.category;
+          const subcategoryId = typeof product.subcategory === 'object' ? product.subcategory._id : product.subcategory;
+          const categoryName = typeof product.category === 'object' ? product.category.name : product.categoryName;
+          const subCategoryName = typeof product.subcategory === 'object' ? product.subcategory.name : product.subCategoryName;
+
+          console.log("Extracted categoryId:", categoryId);
+          console.log("Extracted subcategoryId:", subcategoryId);
 
           // Set productsData (legacy)
           setProductsData({
-            category: product.category || "",
-            categoryName: product.categoryName || "",
-            subcategory: product.subcategory || "",
-            subCategoryName: product.subCategoryName || "",
+            category: categoryId || "",
+            categoryName: categoryName || "",
+            subcategory: subcategoryId || "",
+            subCategoryName: subCategoryName || "",
             name: product.name || "",
             gender: product.gender || "",
             parameter_type: product.parameter_type || "",
@@ -251,10 +265,10 @@ function Products(props) {
 
           // Set productData (main form state)
           setProductData({
-            category: product.category || "",
-            categoryName: product.categoryName || "",
-            subcategory: product.subcategory || "",
-            subCategoryName: product.subCategoryName || "",
+            category: categoryId || "",
+            categoryName: categoryName || "",
+            subcategory: subcategoryId || "",
+            subCategoryName: subCategoryName || "",
             name: product.name || "",
             gender: product.gender || "",
             short_description: product.short_description || "",
@@ -288,12 +302,25 @@ function Products(props) {
             }]);
           }
 
-          setSelectedCategory(product.category);
-          const selectedCategory = categoryData.find(
-            (cat) => cat._id === product.category
+          // Set category and subcategories using the passed categories array
+          setSelectedCategory(categoryId);
+          
+          // Find the selected category from the categories array using the extracted ID
+          const selectedCategoryObj = categories.find(
+            (cat) => cat._id === categoryId
           );
 
-          setFilteredSubCategories(selectedCategory?.Subcategory || []);
+          console.log("Selected category object:", selectedCategoryObj);
+          console.log("Subcategories:", selectedCategoryObj?.Subcategory);
+
+          // Set filtered subcategories
+          if (selectedCategoryObj && selectedCategoryObj.Subcategory) {
+            setFilteredSubCategories(selectedCategoryObj.Subcategory);
+            console.log("✅ Subcategories set successfully:", selectedCategoryObj.Subcategory.length);
+          } else {
+            setFilteredSubCategories([]);
+            console.warn("⚠️ No subcategories found for category:", categoryId);
+          }
         }
       },
       (err) => {
