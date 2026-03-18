@@ -918,26 +918,27 @@ function Products(props) {
     setFilteredSubCategories([]);
   }
   return (
-    <section className="bg-gray-100 w-full h-full  !p-4 !md:p-5 ">
-      <div className=" h-full">
-        <h1 className="text-2xl md:text-3xl font-semibold text-black  md:mt-2 mt-5 md:mb-5 mb-5">
+    <div className="bg-gray-100 w-full h-full py-5 px-5">
+      <div className="md:pt-[0px] pt-[0px] h-full">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold text-black mb-4 md:mb-5">
           {router.query.id ? "Update Product" : "Add Product"}
         </h1>
 
-        <div className="h-full bg-white rounded-[15px] p-5 overflow-y-scroll scrollbar-hide overflow-scroll pb-36">
+        <div className="md:pb-32 h-full overflow-y-scroll scrollbar-hide overflow-scroll pb-28">
+          <div className="bg-white rounded-[15px] p-3 sm:p-4 md:p-5">
           <form
             ref={forms}
-            className="w-full border-b-4 border-gray-400 pb-5"
+            className="w-full border-b-4 border-gray-400 pb-5 mb-5"
             onSubmit={router.query.id ? updateProduct : createProduct}
           >
-            <div className="grid md:grid-cols-2 grid-cols-1 w-full gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 w-full gap-3 sm:gap-4 md:gap-5">
               <div className="flex flex-col justify-start items-start mb-2">
-                <p className="text-gray-800 text-[16px] font-semibold NunitoSans pb-2">
+                <p className="text-gray-800 text-sm sm:text-base font-semibold NunitoSans pb-2">
                   Category <span className="text-red-500">*</span>
                 </p>
-                <div className="w-full bg-white ">
+                <div className="w-full bg-white">
                   <select
-                    className="w-full  md:py-[14px] py-2 px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040] outline-none rounded-[8px] font-normal md:text-[16px] text-[14px] text-black "
+                    className="w-full py-2 sm:py-3 md:py-[14px] px-2 sm:px-3 md:px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040] outline-none rounded-[8px] font-normal text-sm sm:text-base text-black "
                     value={productData.category || selectedCategory}
                     onChange={handleCategoryChange}
                     required
@@ -955,12 +956,12 @@ function Products(props) {
               </div>
 
               <div className="flex flex-col justify-start items-start mb-2">
-                <p className="text-gray-800 text-sm font-semibold NunitoSans pb-2">
+                <p className="text-gray-800 text-sm sm:text-base font-semibold NunitoSans pb-2">
                   Sub Category <span className="text-red-500">*</span>
                 </p>
-                <div className="w-full ">
+                <div className="w-full">
                   <select
-                    className="w-full md:py-[14px] py-2 px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040]  outline-none rounded-[8px] font-normal md:text-[16px] text-[14px] text-black"
+                    className="w-full py-2 sm:py-3 md:py-[14px] px-2 sm:px-3 md:px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040] outline-none rounded-[8px] font-normal text-sm sm:text-base text-black"
                     value={productData.subcategory || productsData?.subcategory || ""}
                     onChange={handleSubCategoryChange}
                     disabled={!selectedCategory || selectedCategory?.notAvailableSubCategory}
@@ -979,12 +980,12 @@ function Products(props) {
               </div>
 
               <div className="flex flex-col justify-start items-start">
-                <p className="text-gray-800 text-sm font-semibold NunitoSans pb-2">
+                <p className="text-gray-800 text-sm sm:text-base font-semibold NunitoSans pb-2">
                   Product Name
                 </p>
                 <input
                   type="text"
-                  className="w-full md:py-[12px] py-2 px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040]  outline-none rounded-[8px] font-normal md:text-[16px] text-[14px] text-black"
+                  className="w-full py-2 sm:py-3 md:py-[12px] px-2 sm:px-3 md:px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040] outline-none rounded-[8px] font-normal text-sm sm:text-base text-black"
                   placeholder="Enter Product Name"
                   value={productData.name}
                   name="name"
@@ -993,15 +994,15 @@ function Products(props) {
                 />
               </div>
               <div className="flex flex-col justify-start items-start">
-                <p className="text-gray-800 text-sm font-semibold NunitoSans pb-2">
+                <p className="text-gray-800 text-sm sm:text-base font-semibold NunitoSans pb-2">
                   Gender
                 </p>
-                <div className=" w-full ">
+                <div className="w-full">
                   <select
                     name="gender"
                     onChange={(e) => setProductData({...productData, gender: e.target.value})}
                     value={productData.gender}
-                    className="w-full md:py-[14px] py-2 px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040]  outline-none rounded-[8px] font-normal md:text-[16px] text-[14px] text-black"
+                    className="w-full py-2 sm:py-3 md:py-[14px] px-2 sm:px-3 md:px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040] outline-none rounded-[8px] font-normal text-sm sm:text-base text-black"
                     placeholder="Select Parameter Type"
                   >
                     <option value="" className="p-5">
@@ -1021,7 +1022,7 @@ function Products(props) {
               </div>
               
               <div className="flex flex-col justify-start items-start">
-                <p className="text-gray-800 text-sm font-semibold NunitoSans pb-2">
+                <p className="text-gray-800 text-sm sm:text-base font-semibold NunitoSans pb-2">
                   Product Type <span className="text-red-500">*</span>
                 </p>
                 <div className="w-full">
@@ -1034,7 +1035,7 @@ function Products(props) {
                       });
                     }}
                     value={productData.is_manufacturer_product.toString()}
-                    className="w-full md:py-[14px] py-2 px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040] outline-none rounded-[8px] font-normal md:text-[16px] text-[14px] text-black"
+                    className="w-full py-2 sm:py-3 md:py-[14px] px-2 sm:px-3 md:px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040] outline-none rounded-[8px] font-normal text-sm sm:text-base text-black"
                     required
                   >
                     <option value="false">General Product (Marketplace)</option>
@@ -1045,7 +1046,7 @@ function Products(props) {
 
               {/* NEW: Variant Type Selection */}
               <div className="flex flex-col justify-start items-start">
-                <p className="text-gray-800 text-sm font-semibold NunitoSans pb-2">
+                <p className="text-gray-800 text-sm sm:text-base font-semibold NunitoSans pb-2">
                   Variant Type <span className="text-red-500">*</span>
                 </p>
                 <div className="w-full">
@@ -1058,7 +1059,7 @@ function Products(props) {
                       });
                     }}
                     value={productData.productType}
-                    className="w-full md:py-[14px] py-2 px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040] outline-none rounded-[8px] font-normal md:text-[16px] text-[14px] text-black"
+                    className="w-full py-2 sm:py-3 md:py-[14px] px-2 sm:px-3 md:px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040] outline-none rounded-[8px] font-normal text-sm sm:text-base text-black"
                     required
                   >
                     <option value="simple">Simple Product (Single Price & Stock)</option>
@@ -1072,13 +1073,13 @@ function Products(props) {
                 </p>
               </div>
               
-              <div className="flex flex-col col-span-2 justify-start items-start">
-                <p className="text-gray-800 text-sm font-semibold NunitoSans pb-2">
+              <div className="flex flex-col col-span-1 md:col-span-2 justify-start items-start">
+                <p className="text-gray-800 text-sm sm:text-base font-semibold NunitoSans pb-2">
                   Short Description
                 </p>
                 <input
                   type="text"
-                  className="w-full md:py-[12px] py-2 px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040]  outline-none rounded-[8px] font-normal md:text-[16px] text-[14px] text-black"
+                  className="w-full py-2 sm:py-3 md:py-[12px] px-2 sm:px-3 md:px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040] outline-none rounded-[8px] font-normal text-sm sm:text-base text-black"
                   placeholder="Enter Short Description"
                   value={productData.short_description}
                   name="short_description"
@@ -1086,8 +1087,8 @@ function Products(props) {
                 />
               </div>
 
-              <div className="flex flex-col justify-start items-start md:col-span-2">
-                <p className="text-gray-800 text-sm font-semibold NunitoSans pb-2">
+              <div className="flex flex-col justify-start items-start col-span-1 md:col-span-2">
+                <p className="text-gray-800 text-sm sm:text-base font-semibold NunitoSans pb-2">
                   Long Description
                 </p>
                 <div className="w-full text-black">
@@ -1107,89 +1108,89 @@ function Products(props) {
 
             {/* SIMPLE PRODUCT FORM */}
             {productData.productType === 'simple' && (
-              <div className="border-2 border-blue-500 rounded-[12px] md:mt-10 mt-5 p-6 bg-blue-50">
-                <h3 className="text-black text-2xl font-bold NunitoSans pb-5 flex items-center gap-2">
-                  <Package className="w-6 h-6 text-blue-600" />
+              <div className="border-2 border-blue-500 rounded-[12px] mt-5 sm:mt-6 md:mt-10 p-3 sm:p-4 md:p-6 bg-blue-50">
+                <h3 className="text-black text-lg sm:text-xl md:text-2xl font-bold NunitoSans pb-3 sm:pb-4 md:pb-5 flex items-center gap-2">
+                  <Package className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
                   Simple Product Details
                 </h3>
                 
-                <div className="grid md:grid-cols-3 grid-cols-1 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 md:gap-5">
                   <div>
-                    <p className="text-gray-800 text-sm font-semibold mb-2">
+                    <p className="text-gray-800 text-xs sm:text-sm font-semibold mb-2">
                       Price <span className="text-red-500">*</span>
                     </p>
                     <input
                       type="number"
                       placeholder="Enter Price"
                       required
-                      className="w-full md:py-[12px] py-2 px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040] outline-none rounded-[8px] font-normal md:text-[16px] text-[14px] text-black"
+                      className="w-full py-2 sm:py-3 md:py-[12px] px-2 sm:px-3 md:px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040] outline-none rounded-[8px] font-normal text-sm sm:text-base text-black"
                       value={simpleProduct.price}
                       onChange={(e) => setSimpleProduct({...simpleProduct, price: e.target.value})}
                     />
                   </div>
 
                   <div>
-                    <p className="text-gray-800 text-sm font-semibold mb-2">
+                    <p className="text-gray-800 text-xs sm:text-sm font-semibold mb-2">
                       Offer Price <span className="text-red-500">*</span>
                     </p>
                     <input
                       type="number"
                       placeholder="Enter Offer Price"
                       required
-                      className="w-full md:py-[12px] py-2 px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040] outline-none rounded-[8px] font-normal md:text-[16px] text-[14px] text-black"
+                      className="w-full py-2 sm:py-3 md:py-[12px] px-2 sm:px-3 md:px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040] outline-none rounded-[8px] font-normal text-sm sm:text-base text-black"
                       value={simpleProduct.offerPrice}
                       onChange={(e) => setSimpleProduct({...simpleProduct, offerPrice: e.target.value})}
                     />
                   </div>
 
                   <div>
-                    <p className="text-gray-800 text-sm font-semibold mb-2">
+                    <p className="text-gray-800 text-xs sm:text-sm font-semibold mb-2">
                       Stock Quantity <span className="text-red-500">*</span>
                     </p>
                     <input
                       type="number"
                       placeholder="Enter Stock"
                       required
-                      className="w-full md:py-[12px] py-2 px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040] outline-none rounded-[8px] font-normal md:text-[16px] text-[14px] text-black"
+                      className="w-full py-2 sm:py-3 md:py-[12px] px-2 sm:px-3 md:px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040] outline-none rounded-[8px] font-normal text-sm sm:text-base text-black"
                       value={simpleProduct.stock}
                       onChange={(e) => setSimpleProduct({...simpleProduct, stock: e.target.value})}
                     />
                   </div>
 
-                  <div className="md:col-span-3">
-                    <p className="text-gray-800 text-sm font-semibold mb-2">
+                  <div className="col-span-1 sm:col-span-2 md:col-span-3">
+                    <p className="text-gray-800 text-xs sm:text-sm font-semibold mb-2">
                       SKU (Optional)
                     </p>
                     <input
                       type="text"
                       placeholder="Enter SKU"
-                      className="w-full md:py-[12px] py-2 px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040] outline-none rounded-[8px] font-normal md:text-[16px] text-[14px] text-black"
+                      className="w-full py-2 sm:py-3 md:py-[12px] px-2 sm:px-3 md:px-[10px] bg-white border-[2px] border-[#B0B0B0] shadow-[2px_4px_6px_0px_#00000040] outline-none rounded-[8px] font-normal text-sm sm:text-base text-black"
                       value={simpleProduct.sku}
                       onChange={(e) => setSimpleProduct({...simpleProduct, sku: e.target.value})}
                     />
                   </div>
 
-                  <div className="md:col-span-3">
-                    <p className="text-gray-800 text-sm font-semibold mb-2">
+                  <div className="col-span-1 sm:col-span-2 md:col-span-3">
+                    <p className="text-gray-800 text-xs sm:text-sm font-semibold mb-2">
                       Product Images <span className="text-red-500">*</span>
                     </p>
-                    <div className="flex gap-3 flex-wrap">
+                    <div className="flex gap-2 sm:gap-3 flex-wrap">
                       {simpleProduct.images.map((img, idx) => (
                         <div key={idx} className="relative">
-                          <img src={img} alt="" className="w-24 h-24 object-cover rounded-lg border-2" />
+                          <img src={img} alt="" className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg border-2" />
                           <button
                             type="button"
                             onClick={() => {
                               const newImages = simpleProduct.images.filter((_, i) => i !== idx);
                               setSimpleProduct({...simpleProduct, images: newImages});
                             }}
-                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                            className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 bg-red-500 text-white rounded-full p-1"
                           >
-                            <X className="w-4 h-4" />
+                            <X className="w-3 h-3 sm:w-4 sm:h-4" />
                           </button>
                         </div>
                       ))}
-                      <label className="w-24 h-24 border-2 border-dashed border-gray-400 rounded-lg flex items-center justify-center cursor-pointer hover:border-orange-500 hover:bg-orange-50 transition">
+                      <label className="w-20 h-20 sm:w-24 sm:h-24 border-2 border-dashed border-gray-400 rounded-lg flex items-center justify-center cursor-pointer hover:border-orange-500 hover:bg-orange-50 transition">
                         <input
                           type="file"
                           accept="image/*"
@@ -1206,7 +1207,7 @@ function Products(props) {
                             }
                           }}
                         />
-                        <Upload className="w-6 h-6 text-gray-400" />
+                        <Upload className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" />
                       </label>
                     </div>
                   </div>
@@ -1216,8 +1217,8 @@ function Products(props) {
 
             {/* VARIABLE PRODUCT FORM */}
             {productData.productType === 'variable' && (
-            <div className="border border-custom-lightGrays rounded-[8px] md:mt-10 mt-5 px-5 pt-5">
-              <p className="text-black text-2xl font-bold NunitoSans pb-5">
+            <div className="border border-custom-lightGrays rounded-[8px] mt-5 sm:mt-6 md:mt-10 px-3 sm:px-4 md:px-5 pt-3 sm:pt-4 md:pt-5">
+              <p className="text-black text-lg sm:text-xl md:text-2xl font-bold NunitoSans pb-3 sm:pb-4 md:pb-5">
                 Varients
               </p>
               {varients.map((item, i) => (
@@ -1516,8 +1517,9 @@ function Products(props) {
             </div>
           </form>
         </div>
+        </div>
       </div>
-    </section>
+    </div>
   );
 }
 

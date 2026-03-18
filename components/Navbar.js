@@ -55,13 +55,12 @@ const Navbar = ({ setOpenTab, openTab }) => {
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <div className=" flex items-center">
-            {/* <img 
-              className="h-10 w-auto object-contain" 
+            <img 
+              className="h-8 w-auto object-contain cursor-pointer" 
               src="/logo.png" 
               alt="Logo"
               onClick={()=> router.push("/")}
-            /> */}
-            <p className="text-2xl text-black font-bold">Store Name/LOGO</p>
+            />
           </div>
 
 
