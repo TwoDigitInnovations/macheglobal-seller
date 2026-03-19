@@ -197,8 +197,14 @@ const SidePannel = ({ setOpenTab, openTab }) => {
             onClick={() => setOpenTab(!openTab)}
           />
           <div className="flex flex-col gap-3 w-full p-3">
-            <div className="p-1 rounded overflow-hidden">
-              <p className="text-3xl text-black font-bold"> LOGO</p>
+            <div className="p-1 rounded overflow-hidden flex justify-center">
+              <Image
+                src="/logo.png"
+                alt="Logo"
+                width={150}
+                height={150}
+                onError={imageOnError}
+              />
             </div>
             <div className="flex ms-2 justify-between">
               <div className="flex">
